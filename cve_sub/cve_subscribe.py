@@ -18,7 +18,23 @@ TODO list
 ******************************
 '''
 
+def replaceInString(original, marker, replacement):
+    return original[:original.index(marker)] + replacement + original[original.index(marker)+1:]
 
+def cveVersionTranslator(version, product_name, dict_file = "cve_product_name_dictionary.txt"):
+    try:
+        dictionary = open(dict_file, "r")
+    except FileNotFoundError:
+        return -1
+
+
+    dictionary_entries = dictionary.read().split("\n")
+    for entry in dictionary_entries:
+        splitted_entry = entry.split("=")
+        if splitted_entry[0] == product_name:
+            return replaceInString(splitted_entry[1], "%", version)
+
+    return 0
 
 
 def cveEntryToDict(cveEntry, spec_product_versions , product_name):
@@ -35,7 +51,7 @@ def cveEntryToDict(cveEntry, spec_product_versions , product_name):
     
 
 
-def findInCve(nvd_cve_file_name, product_name, CVSS_score_down_eq, CVSS_score_up_eq):
+def findInCve(nvd_cve_file_name, product_name, vendor, CVSS_score_down_eq, CVSS_score_up_eq):
     if CVSS_score_down_eq == -1:
         CVSS_score_down_eq = 10.0
     if CVSS_score_up_eq == -1:
@@ -48,8 +64,8 @@ def findInCve(nvd_cve_file_name, product_name, CVSS_score_down_eq, CVSS_score_up
 
     for child in root:
         for schild in child[-1]:
-            if child[-1].tag[-9:] == "vuln_soft":
-                if schild.attrib["name"] == target_name:
+            if child[-1].tag[-9:] == "vuln_soft": #-9 preto, lebo v cve entry ma pred "vuln_soft" hodenu URL a string vuln_soft ma 9 znakov
+                if (schild.attrib["name"] == target_name and schild.attrib["vendor"] == vendor) or (schild.attrib["name"] == target_name):
                     if((float(child.attrib["CVSS_score"]) >= CVSS_score_up_eq) and (float(child.attrib["CVSS_score"]) <= CVSS_score_down_eq)):
                         entry = cveEntryToDict(child, schild, product_name)
                         found_entries.append(entry)
@@ -78,6 +94,7 @@ def prepareFiles(config_path):
     url_META = paths_dict['url_META'][:-1]
     path_recent_zip = paths_dict['path_recent_zip'][:-1]
     url_recent = paths_dict['url_recent'][:-1]
+    OS = paths_dict['operating_system'][:-1]
     paths.close()
 
     #******CHECK SHA256 CHECKSUM IF THERE IS NEW RECENT CVE RELEASE*******
@@ -120,11 +137,11 @@ def prepareFiles(config_path):
         print "all files ready..."
 
     
-    return nvd_cve_file
+    return nvd_cve_file, OS
 
 '''
 argv usage
-python27 cve_subscribe.py paths_file product_name CVSS_score_up_eq CVSS_score_down_eq
+python27 cve_subscribe.py paths_file product_name vendor_name CVSS_score_up_eq CVSS_score_down_eq
 '''
 if __name__ == "__main__":
     if len(argv) == 4:
@@ -147,11 +164,23 @@ if __name__ == "__main__":
         CVSS_down = float(argv[5])
     else:
         print "Insufficient number of arguments provided..."
+        print "proper usage : python27 cve_subscribe.py paths_file product_name vendor_name CVSS_score_up_eq CVSS_score_down_eq"
         exit(1)
 
-    nvd_cve_file_name = prepareFiles(paths_filePath)
+    
+    paths_data = prepareFiles(paths_filePath)
+    nvd_cve_file_name = paths_data[0]
+    operating_system = paths_data[1]
     print product_name
     print CVSS_up
     print CVSS_down
-    for i in (findInCve(nvd_cve_file_name, product_name, CVSS_score_up_eq = CVSS_up, CVSS_score_down_eq = CVSS_down)):
-        print i["versions"][0], "\n======================"
+    versions = []
+    for i in (findInCve(nvd_cve_file_name, product_name, vendor_name, CVSS_score_up_eq = CVSS_up, CVSS_score_down_eq = CVSS_down)):
+        versions.append(i["versions"][0])
+    
+
+    toSend = cveVersionTranslator(versions[0], product_name)
+    while toSend == -1:
+        dict_path = input("Product-name dictionary file not found... Please enter path to this file\n->")
+        toSend = cveVersionTranslator(versions[0], product_name, dict_path)
+    print replaceInString(toSend, "&", operating_system)
