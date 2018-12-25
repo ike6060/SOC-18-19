@@ -2,4 +2,4 @@ path_META=last_checked_meta.xml
 url_META=https://nvd.nist.gov/feeds/xml/cve/1.2/nvdcve-2018.meta
 path_recent_zip=nvdcve-recent.xml.zip
 url_recent=https://nvd.nist.gov/feeds/xml/cve/1.2/nvdcve-2018.xml.zip
-nvd_cve_file=smrdzis.xml
+nvd_cve_file=cve.xml
