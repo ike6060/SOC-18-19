@@ -1,0 +1,16 @@
+HTTP/1.1 404 Not Found
+Date: Sun, 16 Dec 2018 14:44:12 GMT
+Server: Apache/2.4.7 (Ubuntu)
+Content-Length: 279
+Connection: close
+Content-Type: text/html; charset=iso-8859-1
+
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html><head>
+<title>404 Not Found</title>
+</head><body>
+<h1>Not Found</h1>
+<p>The requested URL /anino/aaa was not found on this server.</p>
+<hr>
+<address>Apache/2.4.7 (Ubuntu) Server at smnd.sk Port 80</address>
+</body></html>

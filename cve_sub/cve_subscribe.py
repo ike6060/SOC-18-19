@@ -1,0 +1,157 @@
+import requests
+import zipfile
+import urllib2
+import socket
+from sys import argv, exit
+from os import remove, rename
+import xml.etree.ElementTree as ET
+
+
+'''
+******************************
+TODO list
+-prehodit do commandline rezimu
+-zmenit printy na debiliny jak alert a drbnut nastavenie do argv
+
+
+
+******************************
+'''
+
+
+
+
+def cveEntryToDict(cveEntry, spec_product_versions , product_name):
+    compromised_versions = []
+    cveEntryDict = {}
+    cveEntryDict = cveEntry.attrib
+    cveEntryDict["product_name"] = product_name
+    
+    for version in spec_product_versions:
+        compromised_versions.append(str(version.attrib["num"]))
+    cveEntryDict["versions"] = compromised_versions
+    return cveEntryDict
+
+    
+
+
+def findInCve(nvd_cve_file_name, product_name, CVSS_score_down_eq, CVSS_score_up_eq):
+    if CVSS_score_down_eq == -1:
+        CVSS_score_down_eq = 10.0
+    if CVSS_score_up_eq == -1:
+        CVSS_score_up_eq = 0.0
+    print CVSS_score_up_eq, CVSS_score_down_eq
+    found_entries = []
+    tree = ET.parse(nvd_cve_file_name)
+    root = tree.getroot()
+    target_name = product_name
+
+    for child in root:
+        for schild in child[-1]:
+            if child[-1].tag[-9:] == "vuln_soft":
+                if schild.attrib["name"] == target_name:
+                    if((float(child.attrib["CVSS_score"]) >= CVSS_score_up_eq) and (float(child.attrib["CVSS_score"]) <= CVSS_score_down_eq)):
+                        entry = cveEntryToDict(child, schild, product_name)
+                        found_entries.append(entry)
+    return found_entries
+
+
+
+def parse_paths(file_handle):
+    dict_paths = {}
+    for path in file_handle.readlines():
+        #print "==================",path
+        path_split = path.split("=")
+        dict_paths[path_split[0]] = path_split[1]
+    return dict_paths
+
+
+
+
+
+
+def prepareFiles(config_path):
+    paths = open(config_path)
+    paths_dict = parse_paths(paths)
+    nvd_cve_file = paths_dict["nvd_cve_file"][:-1]
+    path_META = paths_dict['path_META'][:-1]
+    url_META = paths_dict['url_META'][:-1]
+    path_recent_zip = paths_dict['path_recent_zip'][:-1]
+    url_recent = paths_dict['url_recent'][:-1]
+    paths.close()
+
+    #******CHECK SHA256 CHECKSUM IF THERE IS NEW RECENT CVE RELEASE*******
+    print "Checking for new version of CVE"
+    file_META = open(path_META, "r")
+    prev_META_sha256 = file_META.readlines()[-1].split(":")[1]
+
+    new_META = urllib2.urlopen(url_META)
+    new_META_sha256 = new_META.readlines()[-1].split(":")[1]
+    new_META_sha256 = new_META_sha256[:-1]
+    prev_META_sha256 = prev_META_sha256[:-1]
+
+    if prev_META_sha256 == new_META_sha256[:-1]:
+        print "No new CVE has been found"
+    else:
+        print "New CVE has been found\n Downloading..."
+        print "downloading META file..."
+        #******DOWNLOAD NEW META FILE*****
+        req = requests.get(url_META, allow_redirects=True)
+        open(path_META, 'wb').write(req.content)
+        print "\t-> <finished>"
+        print "downloading CVE file..."
+        print "\t-> <finished>"
+        print "\t-> extracting CVE file..."
+        
+        r = requests.get(url_recent, allow_redirects=True)
+        open(path_recent_zip, 'wb').write(r.content)    
+        print path_recent_zip
+        zip_ref = zipfile.ZipFile(path_recent_zip, 'r')
+        temp_cve_name = str(zip_ref.namelist()[0])
+        zip_ref.extractall(''   )
+        zip_ref.close()
+        remove(path_recent_zip)
+        try:
+            remove(nvd_cve_file)
+        except:
+            pass
+        rename(temp_cve_name, nvd_cve_file)
+        print "\t\t-> <finished>"
+        print "all files ready..."
+
+    
+    return nvd_cve_file
+
+'''
+argv usage
+python27 cve_subscribe.py paths_file product_name CVSS_score_up_eq CVSS_score_down_eq
+'''
+if __name__ == "__main__":
+    if len(argv) == 4:
+        paths_filePath= argv[1]
+        product_name = argv[2]
+        vendor_name = argv[3]
+        CVSS_up = -1
+        CVSS_down = -1
+    elif len(argv) == 5:
+        paths_filePath= argv[1]
+        product_name = argv[2]
+        vendor_name = argv[3]
+        CVSS_up = float(argv[4])
+        CVSS_down = -1
+    elif len(argv) == 6:
+        paths_filePath= argv[1]
+        product_name = argv[2]
+        vendor_name = argv[3]
+        CVSS_up = float(argv[4])
+        CVSS_down = float(argv[5])
+    else:
+        print "Insufficient number of arguments provided..."
+        exit(1)
+
+    nvd_cve_file_name = prepareFiles(paths_filePath)
+    print product_name
+    print CVSS_up
+    print CVSS_down
+    for i in (findInCve(nvd_cve_file_name, product_name, CVSS_score_up_eq = CVSS_up, CVSS_score_down_eq = CVSS_down)):
+        print i["versions"][0], "\n======================"
