@@ -2,6 +2,13 @@ import select, socket, sys, Queue, hashlib
 from datetime import datetime, date
 
 
+
+
+
+
+def replaceInString(original, marker, replacement):
+    return original[:original.index(marker)] + replacement + original[original.index(marker)+1:]
+
 def HTTP_Date_generator():
     date_fin = ""
     date_utc =datetime.utcnow()
@@ -95,7 +102,7 @@ connection1 = 0
 
 
 
-servertype = "Server: Apache/2.4.2 (Ubuntu)"
+servertype = "Apache/2.4.2 (Ubuntu)"
 httpVersion= "HTTP/1.1"
 connectionAction = "Close"
 contentType = "text/html; charset=iso-8859-1"
@@ -158,7 +165,7 @@ while inputs:
 
                         header[0] = httpVersion + " " + statusCode
                         header[1] = "Date: " + HTTP_Date_generator()
-                        header[2] = servertype
+                        header[2] = "Server: " + servertype
                         header[3] = "Content-Length: "+ str(len(payload))
                         header[4] = "Connection: " + connectionAction
                         header[5] = "Content-Type: " + contentType
@@ -168,6 +175,7 @@ while inputs:
 
 
 		                #message_queues[s].put("HELLO WORLD")
+                        payload = replaceInString(payload, "%", servertype)
                         message_queues[s].put(str(header +"\n\n"+ payload))
                         #message_queues[s].put(header)
 

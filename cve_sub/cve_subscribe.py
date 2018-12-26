@@ -18,6 +18,14 @@ TODO list
 ******************************
 '''
 
+
+
+
+
+
+
+
+
 def replaceInString(original, marker, replacement):
     return original[:original.index(marker)] + replacement + original[original.index(marker)+1:]
 
@@ -35,7 +43,6 @@ def cveVersionTranslator(version, product_name, dict_file = "cve_product_name_di
             return replaceInString(splitted_entry[1], "%", version)
 
     return 0
-
 
 def cveEntryToDict(cveEntry, spec_product_versions , product_name):
     compromised_versions = []
@@ -144,6 +151,11 @@ argv usage
 python27 cve_subscribe.py paths_file product_name vendor_name CVSS_score_up_eq CVSS_score_down_eq
 '''
 if __name__ == "__main__":
+    #COMMUNICATION PROTOCOL RESPONSES
+    COMM_ACK = "comm_ack"
+    COMM_END = "comm_end"
+    TURN_OFF = "turn_off"
+
     if len(argv) == 4:
         paths_filePath= argv[1]
         product_name = argv[2]
@@ -165,7 +177,7 @@ if __name__ == "__main__":
     else:
         print "Insufficient number of arguments provided..."
         print "proper usage : python27 cve_subscribe.py paths_file product_name vendor_name CVSS_score_up_eq CVSS_score_down_eq"
-        exit(1)
+        sys.exit(1)
 
     
     paths_data = prepareFiles(paths_filePath)
@@ -183,4 +195,35 @@ if __name__ == "__main__":
     while toSend == -1:
         dict_path = input("Product-name dictionary file not found... Please enter path to this file\n->")
         toSend = cveVersionTranslator(versions[0], product_name, dict_path)
-    print replaceInString(toSend, "&", operating_system)
+    
+        
+    toSend = replaceInString(toSend, "&", operating_system)
+    print "This version of webserver will be used in honeypot from now on...", toSend
+    print "Connecting to Honeypot..."
+
+
+    host = (([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")] or [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) + ["no IP found"])[0]
+    s = socket.socket()
+    port = 12345                # Reserve a port for your service.
+    try:
+        s.connect((host, port))
+    except socket.error:
+        print "An error occured during establishment of connection to honeypot."
+        sys.exit(1)
+
+    print "Connection with master established... Sending new server-version."
+
+    try:
+        s.send("Server=" + toSend)
+    except socket.error:
+        print "Unable to send server-version!"
+        sys.exit(1)
+
+
+    if s.recv(1024) == COMM_ACK:
+        print "Action successful, honeypot received new server-version!"
+
+    else:
+        print "Something went wrong on the other side..."
+        
+    s.close() 

@@ -4,3 +4,5 @@ cve_sub/paths.txt
 cve_sub/cve.xml
 cve_sub/last_checked_meta.xml
 cve_sub/cve_product_name_dictionary.txt
+*.xml
+http_hnpt/.vs/http_hnpt/v15/.suo
