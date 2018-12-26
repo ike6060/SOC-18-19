@@ -28,6 +28,9 @@
     <InterpreterReference Include="Global|PythonCore|2.7" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="cve_product_name_dictionary.txt">
+      <SubType>Code</SubType>
+    </Content>
     <Content Include="paths.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
