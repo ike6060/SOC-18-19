@@ -94,7 +94,7 @@ def parse_paths(file_handle):
 
 
 def prepareFiles(config_path):
-    paths = open(config_path)
+    paths = open(config_path, "r")
     paths_dict = parse_paths(paths)
     nvd_cve_file = paths_dict["nvd_cve_file"][:-1]
     path_META = paths_dict['path_META'][:-1]
@@ -106,8 +106,12 @@ def prepareFiles(config_path):
 
     #******CHECK SHA256 CHECKSUM IF THERE IS NEW RECENT CVE RELEASE*******
     print "Checking for new version of CVE"
-    file_META = open(path_META, "r")
-    prev_META_sha256 = file_META.readlines()[-1].split(":")[1]
+    try:
+        file_META = open(path_META, "r")
+        prev_META_sha256 = file_META.readlines()[-1].split(":")[1]
+    except IOError:
+        prev_META_sha256 = ""
+
 
     new_META = urllib2.urlopen(url_META)
     new_META_sha256 = new_META.readlines()[-1].split(":")[1]
@@ -209,7 +213,7 @@ if __name__ == "__main__":
         s.connect((host, port))
     except socket.error:
         print "An error occured during establishment of connection to honeypot."
-        sys.exit(1)
+        exit(1)
 
     print "Connection with master established... Sending new server-version."
 
@@ -217,7 +221,7 @@ if __name__ == "__main__":
         s.send("Server=" + toSend)
     except socket.error:
         print "Unable to send server-version!"
-        sys.exit(1)
+        exit(1)
 
 
     if s.recv(1024) == COMM_ACK:

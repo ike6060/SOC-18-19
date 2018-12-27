@@ -12,12 +12,20 @@ def replaceInString(original, marker, replacement):
 def HTTP_Date_generator():
     date_fin = ""
     date_utc =datetime.utcnow()
+    min = str(date_utc.minute)
+    sec = str(date_utc.second)
+    
     to_day = datetime.today()
     weekdays = ["Mon", "Tue", "Wen", "Thu", "Fri", "Sat", "Sun"]
     months = ["Jan","Feb","Mar","Apr","May","June","July","Aug","Sept","Oct","Nov","Dec"]
     date_fin += weekdays[to_day.weekday()] + ", "
     date_fin+= str(date_utc.day) + " "+ months[date_utc.month-1] +" "+ str(date_utc.year) + " "
-    date_fin += str(date_utc.hour) + ":" + str(date_utc.minute) + ":" + str(date_utc.second) + " GMT"
+    if len(str(date_utc.minute)) == 1:
+        min = "0"+str(date_utc.minute)
+    if len(str(date_utc.second)) == 1:
+        sec = "0"+str(date_utc.second)
+    
+    date_fin += str(date_utc.hour) + ":" + min + ":" + sec + " GMT"
     return date_fin
 
 
@@ -102,9 +110,9 @@ connection1 = 0
 
 
 
-servertype = "Apache/2.4.2 (Ubuntu)"
+servertype = "Apache/2.4.7 (Ubuntu)"
 httpVersion= "HTTP/1.1"
-connectionAction = "Close"
+connectionAction = "close"
 contentType = "text/html; charset=iso-8859-1"
 statusCode = "404 Not Found"
 
@@ -114,7 +122,6 @@ print "listening"
 COMM_ACK = "comm_ack"
 COMM_END = "comm_end"
 TURN_OFF = "turn_off"
-
 
 
 while inputs:
@@ -152,17 +159,16 @@ while inputs:
                             outputs.remove(s)
                     else:
 
-
-                        html_fileName = "html_response.txt"
-                        html_payload_file = open(html_fileName, "r")
-                        payload = html_payload_file.read()
-
+                        
                         logging_fileName = "log.txt"
                         logging_file = open(logging_fileName, "a")
                         log = "Client-Address=" + str(client_address1) + "," +  HTTPreq_to_keyval(data)
                         logging_file.write(log)
                         header = ["", "", "", "", "", ""]
-
+                        payloadfile = open("real_http.txt", "r")
+                        payload = payloadfile.read()
+                        payloadfile.close()
+                        payload = replaceInString(payload, "%", servertype)
                         header[0] = httpVersion + " " + statusCode
                         header[1] = "Date: " + HTTP_Date_generator()
                         header[2] = "Server: " + servertype
@@ -171,11 +177,9 @@ while inputs:
                         header[5] = "Content-Type: " + contentType
 
                         header = "\n".join(header)
+                        
 
-
-
-		                #message_queues[s].put("HELLO WORLD")
-                        payload = replaceInString(payload, "%", servertype)
+                        
                         message_queues[s].put(str(header +"\n\n"+ payload))
                         #message_queues[s].put(header)
 
@@ -203,13 +207,13 @@ while inputs:
                             statusCode = command[1]
 
                         elif command[0] == "Server":
-                            servertype = ": ".join(command)
+                            servertype = command[1]
                         
                         elif command[0] == "Connection":
-                            connectionAction = ": ".join(command)
+                            connectionAction = command[1]
 
                         elif command[0] == "Content-Type":
-                            contentType = ": ".join("command")
+                            contentType = command[1]
 
 
                         message_queues[s].put(COMM_ACK)
