@@ -1,4 +1,4 @@
-import select, socket, sys, Queue, hashlib
+import select, socket, sys, queue, hashlib
 from datetime import datetime, date
 
 
@@ -7,7 +7,11 @@ from datetime import datetime, date
 
 
 def replaceInString(original, marker, replacement):
-    return original[:original.index(marker)] + replacement + original[original.index(marker)+1:]
+    try:
+        result = original[:original.index(marker)] + replacement + original[original.index(marker)+1:]
+    except ValueError:
+        return -1
+    return result
 
 def HTTP_Date_generator():
     date_fin = ""
@@ -116,7 +120,7 @@ connectionAction = "close"
 contentType = "text/html; charset=iso-8859-1"
 statusCode = "404 Not Found"
 
-print "listening"
+print("listening")
 
 #COMMUNICATION PROTOCOL RESPONSES
 COMM_ACK = "comm_ack"
@@ -128,27 +132,26 @@ while inputs:
     readable, writable, exceptional = select.select(
         inputs, outputs, inputs)
     for s in readable:
-        print s.getsockname()
         if (s is server1) and (s.getsockname()[1] == primPort):
             connection1, client_address1 = s.accept()
             connection1.setblocking(0)
             inputs.append(connection1)
-            message_queues[connection1] = Queue.Queue()
+            message_queues[connection1] = queue.Queue()
 
         if (s is server2) and (s.getsockname()[1] == secPort):
             connection2, client_address2 = s.accept()
             connection2.setblocking(0)
             inputs.append(connection2)
-            message_queues[connection2] = Queue.Queue()
+            message_queues[connection2] = queue.Queue()
 
         else:            
             if (s is not server1 and s is not server2):
                 try:
-                    data = s.recv(1024)
+                    data = s.recv(1024).decode('ascii')
                 except socket.error:
                     continue
                 
-                print data
+                print(data)
                 #COMMUNICATION CHANNEL WITH PORT_FORWARDER AND LATER INTERNET
                 if (data) and (s.getsockname()[1] == primPort):                    
                     if (data == COMM_END):
@@ -162,13 +165,15 @@ while inputs:
                         
                         logging_fileName = "log.txt"
                         logging_file = open(logging_fileName, "a")
-                        log = "Client-Address=" + str(client_address1) + "," +  HTTPreq_to_keyval(data)
+                        log = "Client-Address="# + str(client_address1) + "," +  HTTPreq_to_keyval(data)
                         logging_file.write(log)
                         header = ["", "", "", "", "", ""]
+
                         payloadfile = open("real_http.txt", "r")
                         payload = payloadfile.read()
                         payloadfile.close()
                         payload = replaceInString(payload, "%", servertype)
+
                         header[0] = httpVersion + " " + statusCode
                         header[1] = "Date: " + HTTP_Date_generator()
                         header[2] = "Server: " + servertype
@@ -178,13 +183,15 @@ while inputs:
 
                         header = "\n".join(header)
                         
-
                         
                         message_queues[s].put(str(header +"\n\n"+ payload))
                         #message_queues[s].put(header)
 
-                        html_payload_file.close()
                         logging_file.close()
+
+                        if s not in outputs:
+                            outputs.append(s)
+
 
                         if s not in outputs:
                             outputs.append(s)
@@ -229,11 +236,11 @@ while inputs:
     for s in writable:
         try:
             next_msg = message_queues[s].get_nowait()
-        except Queue.Empty:
+        except queue.Empty:
             outputs.remove(s)
         else:
-            print next_msg
-            s.send(next_msg)
+            print(next_msg)
+            s.send(next_msg.encode('ascii'))
 
     for s in exceptional:
         inputs.remove(s)

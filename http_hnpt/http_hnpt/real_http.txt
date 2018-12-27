@@ -3,7 +3,7 @@
 <title>404 Not Found</title>
 </head><body>
 <h1>Not Found</h1>
-<p>The requested URL was not found on this server.</p>
+<p>The requested URL / was not found on this server.</p>
 <hr>
-<address>% Server at smnd.sk Port 80</address>
+<address>% Server at koty.com Port 80</address>
 </body></html>
