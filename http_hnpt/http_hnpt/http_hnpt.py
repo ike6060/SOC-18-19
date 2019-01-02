@@ -93,28 +93,26 @@ def HTTPreq_to_keyval(get_request):
 
 
 
-primPort = 12344
-secPort = 12345
-server1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server1.setblocking(0)
-server2.setblocking(0)
+httpServer_port = 12344
+maintenanceServer_port = 12345
+httpServer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+maintenanceServer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+httpServer_socket.setblocking(0)
+maintenanceServer_socket.setblocking(0)
 hostname = socket.gethostname()    
 IPAddr = (([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")] or [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) + ["no IP found"])[0]
 
-server1.bind((IPAddr, primPort))
-server2.bind((IPAddr, secPort))
-server1.listen(5)
-server2.listen(5)
-inputs = [server1, server2]
+httpServer_socket.bind((IPAddr, httpServer_port))
+maintenanceServer_socket.bind((IPAddr, maintenanceServer_port))
+httpServer_socket.listen(5)
+maintenanceServer_socket.listen(5)
+inputs = [httpServer_socket, maintenanceServer_socket]
 outputs = []
 message_queues = {}
-connection1 = 0
-connection1 = 0
 
 
 
-servertype = "Apache/2.4.7 (Ubuntu)"
+webserverVersion = "Apache/2.4.7 (Ubuntu)"
 httpVersion= "HTTP/1.1"
 connectionAction = "close"
 contentType = "text/html; charset=iso-8859-1"
@@ -132,20 +130,20 @@ while inputs:
     readable, writable, exceptional = select.select(
         inputs, outputs, inputs)
     for s in readable:
-        if (s is server1) and (s.getsockname()[1] == primPort):
-            connection1, client_address1 = s.accept()
-            connection1.setblocking(0)
-            inputs.append(connection1)
-            message_queues[connection1] = queue.Queue()
+        if (s is httpServer_socket) and (s.getsockname()[1] == httpServer_port):
+            httpServer_connection, httpServer_clientAddr = s.accept()
+            httpServer_connection.setblocking(0)
+            inputs.append(httpServer_connection)
+            message_queues[httpServer_connection] = queue.Queue()
 
-        if (s is server2) and (s.getsockname()[1] == secPort):
-            connection2, client_address2 = s.accept()
+        if (s is maintenanceServer_socket) and (s.getsockname()[1] == maintenanceServer_port):
+            maintenanceServer_connection, maintenanceServer_clientAddr = s.accept()
             connection2.setblocking(0)
             inputs.append(connection2)
             message_queues[connection2] = queue.Queue()
 
         else:            
-            if (s is not server1 and s is not server2):
+            if (s is not httpServer_socket and s is not maintenanceServer_socket):
                 try:
                     data = s.recv(1024).decode('ascii')
                 except socket.error:
@@ -153,7 +151,7 @@ while inputs:
                 
                 print(data)
                 #COMMUNICATION CHANNEL WITH PORT_FORWARDER AND LATER INTERNET
-                if (data) and (s.getsockname()[1] == primPort):                    
+                if (data) and (s.getsockname()[1] == httpServer_port):                    
                     if (data == COMM_END):
                         s.close()
                         if s not in inputs:
@@ -172,11 +170,11 @@ while inputs:
                         payloadfile = open("real_http.txt", "r")
                         payload = payloadfile.read()
                         payloadfile.close()
-                        payload = replaceInString(payload, "%", servertype)
+                        payload = replaceInString(payload, "%", webserverVersion)
 
                         header[0] = httpVersion + " " + statusCode
                         header[1] = "Date: " + HTTP_Date_generator()
-                        header[2] = "Server: " + servertype
+                        header[2] = "Server: " + webserverVersion
                         header[3] = "Content-Length: "+ str(len(payload))
                         header[4] = "Connection: " + connectionAction
                         header[5] = "Content-Type: " + contentType
@@ -198,7 +196,7 @@ while inputs:
 
 
                 #COMMUNICATION CHANNEL WITH MASTER APPLICATION
-                elif (data) and (s.getsockname()[1] == secPort):
+                elif (data) and (s.getsockname()[1] == maintenanceServer_port):
                     if(data == COMM_END):
                         s.close()
                         if s not in inputs:
@@ -214,7 +212,7 @@ while inputs:
                             statusCode = command[1]
 
                         elif command[0] == "Server":
-                            servertype = command[1]
+                            webserverVersion = command[1]
                         
                         elif command[0] == "Connection":
                             connectionAction = command[1]
