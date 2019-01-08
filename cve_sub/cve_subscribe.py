@@ -5,13 +5,20 @@ import socket
 from sys import argv, exit
 from os import remove, rename
 import xml.etree.ElementTree as ET
-
+import logging
 
 '''
 ******************************
-TODO list
--prehodit do commandline rezimu
--zmenit printy na debiliny jak alert a drbnut nastavenie do argv
+ERROR NUMBERS
+1 - INSUFFICIENT NUMBER OF ARGUMENTS
+2 - CAN NOT READ ONLINE META FILE
+3 - CAN NOT DOWNLOAD META FILE
+4 - CAN NOT DOWNLOAD CVE DATABASE
+5 - CAN NOT CONNECT TO HNPT
+6 - CAN NOT SEND COMMAND TO HNPT
+7 - HNPT DID NOT SEND ACK SIGNAL
+
+
 
 
 
@@ -29,10 +36,11 @@ TODO list
 def replaceInString(original, marker, replacement):
     return original[:original.index(marker)] + replacement + original[original.index(marker)+1:]
 
-def cveVersionTranslator(version, product_name, dict_file = "cve_product_name_dictionary.txt"):
+def cveVersionTranslator(version,fileLogger, product_name, dict_file = "cve_product_name_dictionary.txt"):
     try:
         dictionary = open(dict_file, "r")
-    except FileNotFoundError:
+    except IOError:
+        fileLogger.warning("cve_productname to http_servername dictionary was not found")
         return -1
 
 
@@ -92,7 +100,7 @@ def parse_paths(file_handle):
 
 
 
-def prepareFiles(config_path):
+def prepareFiles(config_path, nvdCveLogger, fileLogger):
     paths = open(config_path, "r")
     paths_dict = parse_paths(paths)
     nvd_cve_file = paths_dict["nvd_cve_file"][:-1]
@@ -104,35 +112,44 @@ def prepareFiles(config_path):
     paths.close()
     missing_meta = False
     #******CHECK SHA256 CHECKSUM IF THERE IS NEW RECENT CVE RELEASE*******
-    print ("Checking for new version of CVE")
+    nvdCveLogger.info("Checking for new version of CVE")
     try:
         file_META = open(path_META, "r")
         prev_META_sha256 = file_META.readlines()[-1].split(":")[1]
     except IOError:
+        fileLogger.warning("local cve-META file not found")
         missing_meta = True
         prev_META_sha256 = ""
 
-
-    new_META = (urlopen(url_META).read()).decode("ascii")
+    try:
+        new_META = (urlopen(url_META).read()).decode("ascii")
+    except:
+       nvdCveLogger.error("could not read online meta file")
+       exit(2)
     
     new_META_sha256 = (new_META.split("\n")[-2]).split(":")[1]
     
     new_META_sha256 = new_META_sha256[:-1]
     prev_META_sha256 = prev_META_sha256[:-1]
-    print(new_META_sha256 + "\n" + prev_META_sha256)
 
     if prev_META_sha256 == new_META_sha256 and missing_meta == False:
-        print ("No new CVE has been found")
+        nvdCveLogger.info("no new CVE has been found")
     else:
-        print ("New CVE has been found\n Downloading...")
-        print ("downloading META file...")
+        nvdCveLogger.info("new CVE has been found")
+        nvdCveLogger.info("downloading new META file...")
+        fileLogger.info("updating local META file")
         #******DOWNLOAD NEW META FILE*****
-        req = requests.get(url_META, allow_redirects=True)
+        try:
+            req = requests.get(url_META, allow_redirects=True)
+        except:
+            nvdCveLogger.error("could not download new meta file")
+            exit(3)
+
         open(path_META, 'wb').write(req.content)
-        print ("\t-> <finished>")
-        print ("downloading CVE file...")
-        print ("\t-> <finished>")
-        print ("\t-> extracting CVE file...")
+        
+        nvdCveLogger.info("downloading CVE file...")
+        nvdCveLogger.info("<finished>")
+        fileLogger.info("extracting CVE file...")
         
         r = requests.get(url_recent, allow_redirects=True)
         open(path_recent_zip, 'wb').write(r.content)    
@@ -147,9 +164,8 @@ def prepareFiles(config_path):
         except:
             pass
         rename(temp_cve_name, nvd_cve_file)
-        print("\t\t-> <finished>")
-
-    print("all files ready...")
+        fileLogger.info("<extraction finished>")
+    nvdCveLogger.info("<CVE database updating finished>")
     paths.close()
     
     return nvd_cve_file, OS
@@ -159,6 +175,17 @@ argv usage
 python27 cve_subscribe.py paths_file product_name vendor_name CVSS_score_up_eq CVSS_score_down_eq
 '''
 if __name__ == "__main__":
+
+    logging.basicConfig()
+    rootLogger = logging.getLogger()
+    hnptConnectionLogger = logging.getLogger("Connection-Honeypot")
+    fileLogger = logging.getLogger("File-Operations")
+    cveConnectionLogger = logging.getLogger("Connection-NVD-CVE")
+
+    hnptConnectionLogger.setLevel(10)
+    fileLogger.setLevel(10)
+    cveConnectionLogger.setLevel(10)
+    rootLogger.setLevel(10)
     #COMMUNICATION PROTOCOL RESPONSES
     COMM_ACK = "comm_ack"
     COMM_END = "comm_end"
@@ -183,12 +210,12 @@ if __name__ == "__main__":
         CVSS_up = float(argv[4])
         CVSS_down = float(argv[5])
     else:
-        print ("Insufficient number of arguments provided...")
-        print ("proper usage : python27 cve_subscribe.py paths_file product_name vendor_name CVSS_score_up_eq CVSS_score_down_eq")
+        rootLogger.error("Insufficient number of arguments provided...")
+        rootLogger.warning("proper usage : python27 cve_subscribe.py paths_file product_name vendor_name CVSS_score_up_eq CVSS_score_down_eq")
         exit(1)
 
     
-    paths_data = prepareFiles(paths_filePath)
+    paths_data = prepareFiles(paths_filePath, cveConnectionLogger, fileLogger)
     nvd_cve_file_name = paths_data[0]
     operating_system = paths_data[1]
     versions = []
@@ -196,15 +223,15 @@ if __name__ == "__main__":
         versions.append(i["versions"][0])
     
 
-    toSend = cveVersionTranslator(versions[0], product_name)
+    toSend = cveVersionTranslator(versions[0],fileLogger, product_name)
     while toSend == -1:
         dict_path = input("Product-name dictionary file not found... Please enter path to this file\n->")
         toSend = cveVersionTranslator(versions[0], product_name, dict_path)
     
         
     toSend = replaceInString(toSend, "&", operating_system)
-    print ("This version of webserver will be used in honeypot from now on...", toSend)
-    print ("Connecting to Honeypot...")
+    rootLogger.info("new version of hnpt server " + toSend)
+    hnptConnectionLogger.info("connecting to Honeypot...")
 
 
     host = (([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")] or [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) + ["no IP found"])[0]
@@ -213,22 +240,23 @@ if __name__ == "__main__":
     try:
         s.connect((host, port))
     except socket.error:
-        print("An error occured during establishment of connection to honeypot.")
-        exit(1)
+        hnptConnectionLogger.error("could not connect to honeypot")
+        exit(5)
 
-    print ("Connection with master established... Sending new server-version.")
+    hnptConnectionLogger.info("connected to honeypot")
+    hnptConnectionLogger.info ("sending new version of server")
 
     try:
         s.send(("Server=" + toSend).encode("ascii"))
     except socket.error:
-        print( "Unable to send server-version!")
-        exit(1)
-
+        hnptConnectionLogger.error("Unable to send server-version!")
+        exit(6)
+    
+    hnptConnectionLogger.info ("data sent, waiting for acknowledgement from hnpt")
     resp = s.recv(1024).decode("ascii")
     if resp == COMM_ACK:
-        print( "Action successful, honeypot received new server-version!")
-
+        rootLogger.info("successfully sent new server-version, honeypot sent ack")
     else:
-        print ("Something went wrong on the other side...")
+        rootLogger.warning("successfully sent new server-version, honeypot did not send ack")
         
     s.close() 
