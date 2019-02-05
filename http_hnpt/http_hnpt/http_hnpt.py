@@ -1,4 +1,4 @@
-import select, socket, sys, queue, hashlib
+import select, socket, sys, queue, hashlib, string, curses.ascii
 from datetime import datetime, date
 
 
@@ -43,14 +43,14 @@ def check(rec_password, correct_password_hash):
 
 def HTTPreq_to_keyval(get_request):
     get_request_split = get_request.split("\n")
-    get_request_split = filter(None, get_request_split)
+    get_request_split = list(filter(None, get_request_split))
     top = get_request_split[0].split(" ")
     parsedreq = ""
     parsedreq += "Method=\""+top[0]+"\","
     parsedreq += "Site-Requested=\""+ "".join(top[1:-1]) + "\","
     parsedreq += "Http-Version=\""+ top[-1] + "\","
 
-    for i in range(1,len(get_request_split)):
+    for i in range(1,len(get_request_split)-1):
         if get_request_split[i] == "":
             continue
         if get_request_split[i].split("=")[0] == "licenseID":
@@ -72,7 +72,8 @@ def HTTPreq_to_keyval(get_request):
         parsedreq = parsedreq[:-1]
 
 
-    return parsedreq + "Date="+ HTTP_Date_generator()
+    parsedreq = "Date="+ HTTP_Date_generator() +","+ parsedreq + "\n"
+    return parsedreq.replace('\r', '' )
 
 
 
@@ -160,10 +161,10 @@ while inputs:
                             outputs.remove(s)
                     else:
 
-                        
+                        log = ""
                         logging_fileName = "log.txt"
                         logging_file = open(logging_fileName, "a")
-                        log = "Client-Address="# + str(client_address1) + "," +  HTTPreq_to_keyval(data)
+                        log = "Client-Address=" + str(httpServer_clientAddr) + "," +  HTTPreq_to_keyval(data)
                         logging_file.write(log)
                         header = ["", "", "", "", "", ""]
 
