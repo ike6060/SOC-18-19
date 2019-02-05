@@ -211,7 +211,7 @@ while inputs:
                         elif command[0] == "Status-code":
                             statusCode = command[1]
 
-                        elif command[0] == "Server":
+                        elif command[0] == "Server-Version":
                             webserverVersion = command[1]
                         
                         elif command[0] == "Connection":
