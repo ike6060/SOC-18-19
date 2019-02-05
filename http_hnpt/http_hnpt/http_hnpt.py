@@ -93,7 +93,7 @@ def HTTPreq_to_keyval(get_request):
 
 
 
-httpServer_port = 12344
+httpServer_port = 80
 maintenanceServer_port = 12345
 httpServer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 maintenanceServer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
