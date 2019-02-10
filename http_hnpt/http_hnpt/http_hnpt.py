@@ -47,7 +47,9 @@ def HTTPreq_to_keyval(get_request):
     top = get_request_split[0].split(" ")
     parsedreq = ""
     parsedreq += "Method=\""+top[0]+"\","
-    parsedreq += "Site-Requested=\""+ "".join(top[1:-1]) + "\","
+
+    requested_site = "".join(top[1:-1])
+    parsedreq += "Site-Requested=\""+ requested_site + "\","
     parsedreq += "Http-Version=\""+ top[-1] + "\","
 
     for i in range(1,len(get_request_split)-1):
@@ -73,7 +75,7 @@ def HTTPreq_to_keyval(get_request):
 
 
     parsedreq = parsedreq + "\n"
-    return parsedreq.replace('\r', '' )
+    return parsedreq.replace('\r', '' ), requested_site.replace('\r', '')
 
 
 

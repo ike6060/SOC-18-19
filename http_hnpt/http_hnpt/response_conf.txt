@@ -1,0 +1,11 @@
+#if subURL in "" - specific URL- ex. "/login.php"=*filepath*
+#if subURL in %% - contains word - ex. %/login.php%=*filepath*
+#multiple chained conditions allowed (only or for now "||") ex. %something%||"somethingelse"=*file*
+#default page = default=*filepath*
+#
+#
+#keep no \n at the end of this file !!!!
+#
+%admin_login%=./html_responses/form_admin_login.txt
+%user_login%||%usr_login%||%user-log%||"/user/login.php"=./html_responses/form_user_login.txt
+default=./html_responses/404.txt
