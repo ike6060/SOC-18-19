@@ -139,9 +139,9 @@ while inputs:
 
         if (s is maintenanceServer_socket) and (s.getsockname()[1] == maintenanceServer_port):
             maintenanceServer_connection, maintenanceServer_clientAddr = s.accept()
-            connection2.setblocking(0)
-            inputs.append(connection2)
-            message_queues[connection2] = queue.Queue()
+            maintenanceServer_connection.setblocking(0)
+            inputs.append(maintenanceServer_connection)
+            message_queues[maintenanceServer_connection] = queue.Queue()
 
         else:            
             if (s is not httpServer_socket and s is not maintenanceServer_socket):
