@@ -79,7 +79,22 @@ def HTTPreq_to_keyval(get_request):
 
 
 
+def getResponseFileName(url_requested,resp_conf_file_object):
+    for conf_line in resp_conf_file_object:
+        #check line is commented
+        if conf_line[0] == "#":
+            continue
 
+        conditions, response_page_path = conf_line.split("=")
+        for condition in conditions.split("||"):
+            if condition[0] == "%" and url_requested.find(condition[1:-1]) != -1:
+                return response_page_path.replace("\n", "")
+            elif condition[0] == "\"" and url_requested == condition[1:-1]:
+                return response_page_path.replace("\n", "")
+        if conditions == "default":
+            return response_page_path.replace("\n", "")
+                
+       
 
 
 
@@ -165,16 +180,20 @@ while inputs:
                     else:
                         #********writing log via syslog***************
                         log = ""
-                        log = "Client-Address=" + str(httpServer_clientAddr) + "," +  HTTPreq_to_keyval(data)
+                        output, URL_requested = HTTPreq_to_keyval(data)
+                        log = "Client-Address=" + str(httpServer_clientAddr) + "," +  output
                         syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL5)
                         syslog.syslog(syslog.LOG_INFO, log)
                         syslog.closelog()
                         
-                        
+                        resp_conf_file = open("response_conf.txt", "r")
+                        response_filename = getResponseFileName(URL_requested, resp_conf_file)
+                        resp_conf_file.close()
+
                         #*******building http header and payload******
                         header = ["", "", "", "", "", ""]
 
-                        payloadfile = open("real_http.txt", "r")
+                        payloadfile = open(response_filename, "r")
                         payload = payloadfile.read()
                         payloadfile.close()
                         payload = replaceInString(payload, "%", webserverVersion)

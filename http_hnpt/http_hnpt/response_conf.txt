@@ -6,6 +6,7 @@
 #
 #keep no \n at the end of this file !!!!
 #
+%index%=.html_responses/index_page.txt
 %admin_login%=./html_responses/form_admin_login.txt
 %user_login%||%usr_login%||%user-log%||"/user/login.php"=./html_responses/form_user_login.txt
 default=./html_responses/404.txt
