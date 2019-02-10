@@ -1,4 +1,4 @@
-import select, socket, sys, queue, hashlib, string, curses.ascii
+import select, socket, sys, queue, hashlib, string, curses.ascii, syslog
 from datetime import datetime, date
 
 
@@ -72,7 +72,7 @@ def HTTPreq_to_keyval(get_request):
         parsedreq = parsedreq[:-1]
 
 
-    parsedreq = "Date="+ HTTP_Date_generator() +","+ parsedreq + "\n"
+    parsedreq = parsedreq + "\n"
     return parsedreq.replace('\r', '' )
 
 
@@ -139,9 +139,9 @@ while inputs:
 
         if (s is maintenanceServer_socket) and (s.getsockname()[1] == maintenanceServer_port):
             maintenanceServer_connection, maintenanceServer_clientAddr = s.accept()
-            connection2.setblocking(0)
-            inputs.append(connection2)
-            message_queues[connection2] = queue.Queue()
+            maintenanceServer_connection.setblocking(0)
+            inputs.append(maintenanceServer_connection)
+            message_queues[maintenanceServer_connection] = queue.Queue()
 
         else:            
             if (s is not httpServer_socket and s is not maintenanceServer_socket):
@@ -160,12 +160,15 @@ while inputs:
                         if s in outputs:
                             outputs.remove(s)
                     else:
-
+                        #********writing log via syslog***************
                         log = ""
-                        logging_fileName = "log.txt"
-                        logging_file = open(logging_fileName, "a")
                         log = "Client-Address=" + str(httpServer_clientAddr) + "," +  HTTPreq_to_keyval(data)
-                        logging_file.write(log)
+                        syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL5)
+                        syslog.syslog(syslog.LOG_INFO, log)
+                        syslog.closelog()
+                        
+                        
+                        #*******building http header and payload******
                         header = ["", "", "", "", "", ""]
 
                         payloadfile = open("real_http.txt", "r")
@@ -185,8 +188,6 @@ while inputs:
                         
                         message_queues[s].put(str(header +"\n\n"+ payload))
                         #message_queues[s].put(header)
-
-                        logging_file.close()
 
                         if s not in outputs:
                             outputs.append(s)
