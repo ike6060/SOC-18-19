@@ -117,7 +117,7 @@ webserverVersion = "Apache/2.4.7 (Ubuntu)"
 httpVersion= "HTTP/1.1"
 connectionAction = "close"
 contentType = "text/html; charset=iso-8859-1"
-statusCode = "404 Not Found"
+statusCode = "200 OK"
 
 print("listening")
 
@@ -147,7 +147,8 @@ while inputs:
             if (s is not httpServer_socket and s is not maintenanceServer_socket):
                 try:
                     data = s.recv(1024).decode('ascii')
-                except socket.error:
+                except (socket.error, UnicodeDecodeError) as e:
+                    print(e)
                     continue
                 
                 print(data)
