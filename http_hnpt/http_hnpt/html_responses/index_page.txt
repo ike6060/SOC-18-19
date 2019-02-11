@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>welcome to my page</h2>
+<p>to login as admin proceed here</p>
+<a href = "/admin_login.php">admin login</a>
+<br>
+<p>to login as user proceed here</p>
+<a href = "/user/login.php">user login</a>
+<address>% Server at koty.com Port 80</address>
+</body>
+</html>

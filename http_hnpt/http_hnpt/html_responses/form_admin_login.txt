@@ -6,10 +6,10 @@
 
 <form action="/admin_login.php">
   First name:<br>
-  <input type="text" name="firstname" value="Mickey">
+  <input type="text" name="firstname" value="name">
   <br>
   Last name:<br>
-  <input type="password" name="lastname" value="Mouse">
+  <input type="password" name="passwd" value="password">
   <br><br>
   <input type="submit" value="Submit">
 </form> 
