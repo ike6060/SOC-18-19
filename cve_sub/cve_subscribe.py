@@ -39,6 +39,7 @@ def replaceInString(original, marker, replacement):
 def cveVersionTranslator(version,fileLogger, product_name, dict_file = "cve_product_name_dictionary.txt"):
     try:
         dictionary = open(dict_file, "r")
+        
     except IOError:
         fileLogger.warning("cve_productname to http_servername dictionary was not found")
         return -1
@@ -170,6 +171,51 @@ def prepareFiles(config_path, nvdCveLogger, fileLogger):
     
     return nvd_cve_file, OS
 
+
+def findNewestVersion(versions, max_subversions = 2, which_apply = None):
+    res = []
+    versions_splt = []
+    main_index = 0
+    subver_index = 0
+    top_version = [0,0,0]
+    opakujuce = 0
+    next_round = []
+    biggest_found = False
+    for i in versions:
+        versions_splt.append(list(map(int, i.split("."))))
+    
+    
+    while biggest_found == False:
+        
+
+        if versions_splt[main_index][subver_index] > top_version[subver_index]:
+            top_version = versions_splt[main_index]
+            next_round = []
+            next_round.append(versions_splt[main_index])
+        elif versions_splt[main_index][subver_index] == top_version[subver_index]:
+            next_round.append(versions_splt[main_index])
+
+        
+
+        if main_index < len(versions_splt)-1:
+            main_index += 1
+        elif main_index == len(versions_splt) -1:
+            versions_splt = list(next_round)
+            
+
+            if len(versions_splt) <= 1:
+                return ".".join(list(map(str, top_version)))
+                biggest_found = True
+            next_round = []
+            main_index = 0
+            subver_index += 1
+            top_version = [0,0,0]
+            
+
+
+
+
+
 '''
 argv usage
 python27 cve_subscribe.py paths_file product_name vendor_name CVSS_score_up_eq CVSS_score_down_eq
@@ -219,14 +265,18 @@ if __name__ == "__main__":
     nvd_cve_file_name = paths_data[0]
     operating_system = paths_data[1]
     versions = []
-    for i in (findInCve(nvd_cve_file_name, product_name, vendor_name, CVSS_score_up_eq = CVSS_up, CVSS_score_down_eq = CVSS_down)):
-        versions.append(i["versions"][0])
-    
+    top_entry_by_CVSS = {"CVSS_score":0.0}
 
-    toSend = cveVersionTranslator(versions[0],fileLogger, product_name)
+    for i in (findInCve(nvd_cve_file_name, product_name, vendor_name, CVSS_score_up_eq = CVSS_up, CVSS_score_down_eq = CVSS_down)):
+        print(i["CVSS_score"])
+        if float(i["CVSS_score"]) > float(top_entry_by_CVSS["CVSS_score"]):
+            top_entry_by_CVSS = i
+ 
+    
+    toSend = cveVersionTranslator(findNewestVersion(top_entry_by_CVSS["versions"]),fileLogger, product_name)
     while toSend == -1:
         dict_path = input("Product-name dictionary file not found... Please enter path to this file\n->")
-        toSend = cveVersionTranslator(versions[0], product_name, dict_path)
+        toSend = cveVersionTranslator(findNewestVersion(top_entry_by_CVSS["versions"]), product_name, dict_path)
     
         
     toSend = replaceInString(toSend, "&", operating_system)
