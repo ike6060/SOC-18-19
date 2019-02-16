@@ -110,6 +110,7 @@ def prepareFiles(config_path, nvdCveLogger, fileLogger):
     path_recent_zip = paths_dict['path_recent_zip'][:-1]
     url_recent = paths_dict['url_recent'][:-1]
     OS = paths_dict['operating_system'][:-1]
+    HNPT_IP = paths_dict['HNPT_IPaddress'][:-1]
     paths.close()
     missing_meta = False
     #******CHECK SHA256 CHECKSUM IF THERE IS NEW RECENT CVE RELEASE*******
@@ -169,7 +170,7 @@ def prepareFiles(config_path, nvdCveLogger, fileLogger):
     nvdCveLogger.info("<CVE database updating finished>")
     paths.close()
     
-    return nvd_cve_file, OS
+    return nvd_cve_file, OS, HNPT_IP
 
 
 def findNewestVersion(versions, max_subversions = 2, which_apply = None):
@@ -262,8 +263,8 @@ if __name__ == "__main__":
 
     
     paths_data = prepareFiles(paths_filePath, cveConnectionLogger, fileLogger)
-    nvd_cve_file_name = paths_data[0]
-    operating_system = paths_data[1]
+    nvd_cve_file_name, operating_system = paths_data
+
     versions = []
     top_entry_by_CVSS = {"CVSS_score":0.0}
 
