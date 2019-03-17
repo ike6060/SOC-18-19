@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>AUTHENTIFICATION SUCCESSFUL</h2>
+
+<address>% Server at koty.com Port 80</address>
+</body>
+</html>

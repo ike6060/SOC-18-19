@@ -85,7 +85,7 @@ def getResponseFileName(url_requested,resp_conf_file_object):
         if conf_line[0] == "#":
             continue
 
-        conditions, response_page_path = conf_line.split("=")
+        conditions, response_page_path = conf_line.split("==")
         for condition in conditions.split("||"):
             if condition[0] == "%" and url_requested.find(condition[1:-1]) != -1:
                 return response_page_path.replace("\n", "")
@@ -196,8 +196,12 @@ while inputs:
                         payloadfile = open(response_filename, "r")
                         payload = payloadfile.read()
                         payloadfile.close()
-                        payload = replaceInString(payload, "%", webserverVersion)
-
+                        
+                        
+                        if(response_filename == "./html_responses/404.txt"):
+                            statusCode = "404 Not Found"
+                        else:
+                            statusCode = "200 OK"
                         header[0] = httpVersion + " " + statusCode
                         header[1] = "Date: " + HTTP_Date_generator()
                         header[2] = "Server: " + webserverVersion
@@ -206,7 +210,7 @@ while inputs:
                         header[5] = "Content-Type: " + contentType
 
                         header = "\n".join(header)
-                        
+                        payload = replaceInString(payload, "%", webserverVersion)
                         
                         message_queues[s].put(str(header +"\n\n"+ payload))
                         #message_queues[s].put(header)

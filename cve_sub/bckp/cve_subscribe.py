@@ -109,7 +109,6 @@ def prepareFiles(config_path, nvdCveLogger, fileLogger):
     path_recent_zip = paths_dict['path_recent_zip'][:-1]
     url_recent = paths_dict['url_recent'][:-1]
     OS = paths_dict['operating_system'][:-1]
-    default_apache_version = paths_dict['default_apache_version'][:-1]
     paths.close()
     missing_meta = False
     #******CHECK SHA256 CHECKSUM IF THERE IS NEW RECENT CVE RELEASE*******
@@ -169,7 +168,7 @@ def prepareFiles(config_path, nvdCveLogger, fileLogger):
     nvdCveLogger.info("<CVE database updating finished>")
     paths.close()
     
-    return nvd_cve_file, OS, default_apache_version
+    return nvd_cve_file, OS
 
 '''
 argv usage
@@ -212,33 +211,30 @@ if __name__ == "__main__":
         CVSS_down = float(argv[5])
     else:
         rootLogger.error("Insufficient number of arguments provided...")
-        rootLogger.warning("proper usage : python3.6 cve_subscribe.py paths_file product_name vendor_name CVSS_score_up_eq CVSS_score_down_eq")
+        rootLogger.warning("proper usage : python27 cve_subscribe.py paths_file product_name vendor_name CVSS_score_up_eq CVSS_score_down_eq")
         exit(1)
 
     
-    nvd_cve_file_name, operating_system, default_apache_version = prepareFiles(paths_filePath, cveConnectionLogger, fileLogger)
+    paths_data = prepareFiles(paths_filePath, cveConnectionLogger, fileLogger)
+    nvd_cve_file_name = paths_data[0]
+    operating_system = paths_data[1]
     versions = []
-
     for i in (findInCve(nvd_cve_file_name, product_name, vendor_name, CVSS_score_up_eq = CVSS_up, CVSS_score_down_eq = CVSS_down)):
         versions.append(i["versions"][0])
-    if versions == []:
-        toSend = default_apache_version
-        rootLogger.warning("no new vulnerable version in cve found...")
-        rootLogger.warning("sending default vuln-version to honeypot")
-    else:
-     
-        toSend = cveVersionTranslator(versions[0],fileLogger, product_name)
-        while toSend == -1:
-            dict_path = input("Product-name dictionary file not found... Please enter path to this file\n->")
-        toSend = cveVersionTranslator(versions[0], product_name, dict_path)  
-        rootLogger.info("new version of hnpt server " + toSend)
+    
 
-
+    toSend = cveVersionTranslator(versions[0],fileLogger, product_name)
+    while toSend == -1:
+        dict_path = input("Product-name dictionary file not found... Please enter path to this file\n->")
+        toSend = cveVersionTranslator(versions[0], product_name, dict_path)
+    
+        
     toSend = replaceInString(toSend, "&", operating_system)
+    rootLogger.info("new version of hnpt server " + toSend)
     hnptConnectionLogger.info("connecting to Honeypot...")
 
 
-    host = "127.0.0.1"
+    host = "192.168.252.19"
     s = socket.socket()
     port = 12345                # Reserve a port for your service.
     try:
