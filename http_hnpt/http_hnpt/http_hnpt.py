@@ -210,7 +210,7 @@ while inputs:
                         if (len(URL_requested) == 0):
                             statusCode = "400 Bad Request"
                             response_filename = "./html_responses/400_badrequest.txt"
-                        elif (URL_requested[0] != "/" or checkForSpecialChars(URL_requested)):
+                        elif (URL_requested[0] != "/" or checkForSpecialChars(URL_requested)) and ("/" not in URL_requested):
                             statusCode = "400 Bad Request"
                             response_filename = "./html_responses/400_badrequest.txt"
                         elif(response_filename == "./html_responses/404.txt"):
