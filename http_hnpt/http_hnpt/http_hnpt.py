@@ -85,6 +85,7 @@ def getResponseFileName(url_requested,resp_conf_file_object):
         if conf_line[0] == "#":
             continue
 
+
         conditions, response_page_path = conf_line.split("==")
         for condition in conditions.split("||"):
             if condition[0] == "%" and url_requested.find(condition[1:-1]) != -1:
@@ -95,9 +96,14 @@ def getResponseFileName(url_requested,resp_conf_file_object):
             return response_page_path.replace("\n", "")
                 
        
+def checkForSpecialChars(url):
+    special_chars = ["|", "+", "-", "&&", "||", "!", "(", ")", "{", "}", "[", "]", "^",
+                "~", "*", ":"]
 
-
-
+    for i in url[1:]:
+        if i in special_chars:
+            return True
+    return False
 
 
 
@@ -130,7 +136,7 @@ message_queues = {}
 
 
 
-webserverVersion = "Apache/2.4.7 (Ubuntu)"
+webserverVersion = "Apache/2.4.6 (CentOS)"
 httpVersion= "HTTP/1.1"
 connectionAction = "close"
 contentType = "text/html; charset=iso-8859-1"
@@ -142,6 +148,8 @@ print("listening")
 COMM_ACK = "comm_ack"
 COMM_END = "comm_end"
 TURN_OFF = "turn_off"
+
+
 
 
 while inputs:
@@ -186,6 +194,9 @@ while inputs:
                         syslog.syslog(syslog.LOG_INFO, log)
                         syslog.closelog()
                         
+
+                        
+
                         resp_conf_file = open("response_conf.txt", "r")
                         response_filename = getResponseFileName(URL_requested, resp_conf_file)
                         resp_conf_file.close()
@@ -193,15 +204,28 @@ while inputs:
                         #*******building http header and payload******
                         header = ["", "", "", "", "", ""]
 
+                        
+                        print(URL_requested)
+                        
+                        if (len(URL_requested) == 0):
+                            statusCode = "400 Bad Request"
+                            response_filename = "./html_responses/400_badrequest.txt"
+                        elif (URL_requested[0] != "/" or checkForSpecialChars(URL_requested)):
+                            statusCode = "400 Bad Request"
+                            response_filename = "./html_responses/400_badrequest.txt"
+                        elif(response_filename == "./html_responses/404.txt"):
+                            statusCode = "404 Not Found"
+
+                        else:
+                            statusCode = "200 OK"
+                        
+
+
                         payloadfile = open(response_filename, "r")
                         payload = payloadfile.read()
                         payloadfile.close()
-                        
-                        
-                        if(response_filename == "./html_responses/404.txt"):
-                            statusCode = "404 Not Found"
-                        else:
-                            statusCode = "200 OK"
+
+
                         header[0] = httpVersion + " " + statusCode
                         header[1] = "Date: " + HTTP_Date_generator()
                         header[2] = "Server: " + webserverVersion

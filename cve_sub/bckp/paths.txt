@@ -1,6 +1,7 @@
 path_META=last_checked_meta.xml
-url_META=https://nvd.nist.gov/feeds/xml/cve/1.2/nvdcve-2018.meta
+url_META=https://nvd.nist.gov/feeds/xml/cve/1.2/nvdcve-recent.meta
 path_recent_zip=nvdcve-recent.xml.zip
-url_recent=https://nvd.nist.gov/feeds/xml/cve/1.2/nvdcve-2018.xml.zip
+url_recent=https://nvd.nist.gov/feeds/xml/cve/1.2/nvdcve-recent.xml.zip
 nvd_cve_file=cve.xml
 operating_system=CentOS
+default_apache_version=Apache/2.0.64 (&)
