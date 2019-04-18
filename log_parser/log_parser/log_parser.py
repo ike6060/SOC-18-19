@@ -1,4 +1,5 @@
 
+
 def prepareFiles(confpath):
     ignore_chars = "\n# "
     try:

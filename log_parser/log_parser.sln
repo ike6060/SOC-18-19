@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27004.2006
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "logparse", "logparse.pyproj", "{DD89E5C3-1611-4D7B-BF3C-8611E2974F43}"
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "log_parser", "log_parser\log_parser.pyproj", "{59BB4EA4-7CFF-4143-908D-7976FD3FF8AA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,13 +11,13 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{DD89E5C3-1611-4D7B-BF3C-8611E2974F43}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DD89E5C3-1611-4D7B-BF3C-8611E2974F43}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59BB4EA4-7CFF-4143-908D-7976FD3FF8AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59BB4EA4-7CFF-4143-908D-7976FD3FF8AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {43561443-580B-469A-81E4-5041BD5A131C}
+		SolutionGuid = {9881FCC9-73C6-44D3-A949-27D0165532C2}
 	EndGlobalSection
 EndGlobal
