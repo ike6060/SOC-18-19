@@ -101,7 +101,6 @@ def logsplit(string):
 logfilepath = prepareFiles("master.conf")
 logfile = open(logfilepath, "r")
 attacker_ip_dict = {}
-requested = open("requested_sites.txt", "w+")
 for line in logfile:
     #print(logsplit(line))
     line_splt = line.split(": ")
@@ -111,20 +110,16 @@ for line in logfile:
     line = "".join(line_splt[1:])
     
     logdict = logsplit(line)
-    try:
-        requested.write(logdict["Site-Requested"].strip("/") + "\n")
-    except:
-        pass
 
     attacker_ip = logdict["Client-Address"].split(", ")[0].strip("'")
     try:
         attacker_ip_dict[attacker_ip]+=1
     except KeyError:
         attacker_ip_dict[attacker_ip] = 1
-requested.close()
+
     
 url = "https://iplocation.com/"
-
+print(len(attacker_ip_dict))
 mapa = folium.Map()
 for act_ip in attacker_ip_dict:
     params = {"ip":act_ip}
@@ -171,6 +166,6 @@ for act_ip in attacker_ip_dict:
     else:
         mapa.add_child(folium.Marker(icon=folium.Icon(color='red'), popup=str(attacker_ip_dict[act_ip])+' connections from this address', location=[lat, lng]))
 
-mapa.save("mapa3.html")
+mapa.save("mapa4.html")
 
 
