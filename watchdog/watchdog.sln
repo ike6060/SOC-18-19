@@ -1,0 +1,23 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27004.2006
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "watchdog", "watchdog\watchdog.pyproj", "{6A56AE5E-CD94-4E50-A1EB-B082DD86549D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6A56AE5E-CD94-4E50-A1EB-B082DD86549D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A56AE5E-CD94-4E50-A1EB-B082DD86549D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C76CF509-589B-44ED-AE1E-46215C5B8A0A}
+	EndGlobalSection
+EndGlobal
