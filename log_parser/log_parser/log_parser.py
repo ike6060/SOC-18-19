@@ -101,6 +101,9 @@ def logsplit(string):
 logfilepath = prepareFiles("master.conf")
 logfile = open(logfilepath, "r")
 attacker_ip_dict = {}
+log_dict_lst = []
+
+
 for line in logfile:
     #print(logsplit(line))
     line_splt = line.split(": ")
@@ -110,8 +113,9 @@ for line in logfile:
     line = "".join(line_splt[1:])
     
     logdict = logsplit(line)
-
-    attacker_ip = logdict["Client-Address"].split(", ")[0].strip("'")
+    logdict["Client-Address"] = logdict["Client-Address"].split(", ")[0].strip("'")
+    attacker_ip = logdict["Client-Address"]
+    log_dict_lst.append(logdict)
     try:
         attacker_ip_dict[attacker_ip]+=1
     except KeyError:
@@ -119,7 +123,8 @@ for line in logfile:
 
     
 url = "https://iplocation.com/"
-print(len(attacker_ip_dict))
+#print(log_dict_lst)
+
 mapa = folium.Map()
 for act_ip in attacker_ip_dict:
     params = {"ip":act_ip}
@@ -160,12 +165,12 @@ for act_ip in attacker_ip_dict:
         continue
 
     if attacker_ip_dict[act_ip]<2:
-        mapa.add_child(folium.Marker(icon=folium.Icon(color='green'), popup=str(attacker_ip_dict[act_ip])+' connections from this address', location=[lat, lng]))
+        mapa.add_child(folium.Marker(icon=folium.Icon(color='green'), popup=str(attacker_ip_dict[act_ip])+' connections from this address'+act_ip, location=[lat, lng]))
     elif attacker_ip_dict[act_ip]>=2 and attacker_ip_dict[act_ip]<7:
-        mapa.add_child(folium.Marker(icon=folium.Icon(color='blue'), popup=str(attacker_ip_dict[act_ip])+' connections from this address', location=[lat, lng]))
+        mapa.add_child(folium.Marker(icon=folium.Icon(color='blue'), popup=str(attacker_ip_dict[act_ip])+' connections from this address'+act_ip, location=[lat, lng]))
     else:
-        mapa.add_child(folium.Marker(icon=folium.Icon(color='red'), popup=str(attacker_ip_dict[act_ip])+' connections from this address', location=[lat, lng]))
+        mapa.add_child(folium.Marker(icon=folium.Icon(color='red'), popup=str(attacker_ip_dict[act_ip])+' connections from this address'+act_ip, location=[lat, lng]))
 
-mapa.save("mapa4.html")
+mapa.save("mapa28_4_2019.html")
 
 
