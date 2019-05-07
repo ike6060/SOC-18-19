@@ -1,7 +1,6 @@
 
 import getpass, smtplib, argparse
-from email.MIMEMultipart import MIMEMultipart
-from email.MIMEText import MIMEText
+from email.mime.text import MIMEText as text
 from os.path import exists
 import sys
 
@@ -28,24 +27,20 @@ def main():
     
     gmail_pass = "akafuka123"
     gmail_account = "emailsender789"
-    sent_from = gmail_account  
-    to = ['ivokotora@gmail.com']  
-    subject = 'HNPT not running...'  
-    body = ''
-
-    email_text = """\  
-    From: %s  
-    To: %s  
-    Subject: %s
-
-    %s
-    """ % (sent_from, ", ".join(to), subject, body)
-
+    FROM = "emailsender789@gmail.com"
+    TO = "ivokotora@gmail.com"
+    message = "ahoj"
     try:  
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
         server.ehlo()
-        server.login("emailsender789@gmail.com", "akafuka123")
-        server.sendmail(sent_from, to, email_text)
+        server.login(FROM, "akafuka123")
+        m = text(message)
+
+        m['Subject'] = 'HONEYPOT OR MASTER ARE NOT RUNNING'
+        m['From'] = FROM
+        m['To'] = TO
+
+        server.sendmail(FROM, TO, m.as_string())
         server.close()
 
         print('Email sent!')
