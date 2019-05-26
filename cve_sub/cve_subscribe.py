@@ -6,7 +6,7 @@ from sys import argv, exit
 from os import remove, rename
 import xml.etree.ElementTree as ET
 import logging
-
+import time
 '''
 ******************************
 ERROR NUMBERS
@@ -87,7 +87,7 @@ def findInCve(nvd_cve_file_name, product_name, vendor, CVSS_score_down_eq, CVSS_
 
 
 
-def parse_paths(file_handle):
+def parse_conf(file_handle):
     dict_paths = {}
     for path in file_handle.readlines():
         #print "==================",path
@@ -101,16 +101,17 @@ def parse_paths(file_handle):
 
 
 def prepareFiles(config_path, nvdCveLogger, fileLogger):
-    paths = open(config_path, "r")
-    paths_dict = parse_paths(paths)
-    nvd_cve_file = paths_dict["nvd_cve_file"][:-1]
-    path_META = paths_dict['path_META'][:-1]
-    url_META = paths_dict['url_META'][:-1]
-    path_recent_zip = paths_dict['path_recent_zip'][:-1]
-    url_recent = paths_dict['url_recent'][:-1]
-    OS = paths_dict['operating_system'][:-1]
-    default_apache_version = paths_dict['default_apache_version'][:-1]
-    paths.close()
+    conf = open(config_path, "r")
+    conf_dict = parse_conf(conf)
+    nvd_cve_file = conf_dict["nvd_cve_file"][:-1]
+    path_META = conf_dict['path_META'][:-1]
+    url_META = conf_dict['url_META'][:-1]
+    path_recent_zip = conf_dict['path_recent_zip'][:-1]
+    url_recent = conf_dict['url_recent'][:-1]
+    OS = conf_dict['operating_system'][:-1]
+    default_apache_version = conf_dict['default_apache_version'][:-1]
+    hnpt_update_timeout = conf_dict['hnpt_update_timeout'][:-1]
+    conf.close()
     missing_meta = False
     #******CHECK SHA256 CHECKSUM IF THERE IS NEW RECENT CVE RELEASE*******
     nvdCveLogger.info("Checking for new version of CVE")
@@ -167,13 +168,13 @@ def prepareFiles(config_path, nvdCveLogger, fileLogger):
         rename(temp_cve_name, nvd_cve_file)
         fileLogger.info("<extraction finished>")
     nvdCveLogger.info("<CVE database updating finished>")
-    paths.close()
+    conf.close()
     
-    return nvd_cve_file, OS, default_apache_version
+    return nvd_cve_file, OS, default_apache_version, hnpt_update_timeout
 
 '''
 argv usage
-python27 cve_subscribe.py paths_file product_name vendor_name CVSS_score_up_eq CVSS_score_down_eq
+python27 cve_subscribe.py conf_file_path product_name vendor_name CVSS_score_up_eq CVSS_score_down_eq
 '''
 if __name__ == "__main__":
 
@@ -215,52 +216,55 @@ if __name__ == "__main__":
         rootLogger.warning("proper usage : python3.6 cve_subscribe.py paths_file product_name vendor_name CVSS_score_up_eq CVSS_score_down_eq")
         exit(1)
 
-    
-    nvd_cve_file_name, operating_system, default_apache_version = prepareFiles(paths_filePath, cveConnectionLogger, fileLogger)
-    versions = []
 
-    for i in (findInCve(nvd_cve_file_name, product_name, vendor_name, CVSS_score_up_eq = CVSS_up, CVSS_score_down_eq = CVSS_down)):
-        versions.append(i["versions"][0])
-    if versions == []:
-        toSend = default_apache_version
-        rootLogger.warning("no new vulnerable version in cve found...")
-        rootLogger.warning("sending default vuln-version to honeypot")
-    else:
+    hnpt_update_timeout = 5
+    while True:
+        time.sleep(int(hnpt_update_timeout))
+        nvd_cve_file_name, operating_system, default_apache_version, hnpt_update_timeout = prepareFiles(paths_filePath, cveConnectionLogger, fileLogger)
+        versions = []
+
+        for i in (findInCve(nvd_cve_file_name, product_name, vendor_name, CVSS_score_up_eq = CVSS_up, CVSS_score_down_eq = CVSS_down)):
+            versions.append(i["versions"][0])
+        if versions == []:
+            toSend = default_apache_version
+            rootLogger.warning("no new vulnerable version in cve found...")
+            rootLogger.warning("sending default vuln-version to honeypot")
+        else:
      
-        toSend = cveVersionTranslator(versions[0],fileLogger, product_name)
-        while toSend == -1:
-            dict_path = input("Product-name dictionary file not found... Please enter path to this file\n->")
-        toSend = cveVersionTranslator(versions[0], product_name, dict_path)  
-        rootLogger.info("new version of hnpt server " + toSend)
+            toSend = cveVersionTranslator(versions[0],fileLogger, product_name)
+            while toSend == -1:
+                dict_path = input("Product-name dictionary file not found... Please enter path to this file\n->")
+            toSend = cveVersionTranslator(versions[0], product_name, dict_path)  
+            rootLogger.info("new version of hnpt server " + toSend)
 
 
-    toSend = replaceInString(toSend, "&", operating_system)
-    hnptConnectionLogger.info("connecting to Honeypot...")
+        toSend = replaceInString(toSend, "&", operating_system)
+        hnptConnectionLogger.info("connecting to Honeypot...")
 
 
-    host = "127.0.0.1"
-    s = socket.socket()
-    port = 12345                # Reserve a port for your service.
-    try:
-        s.connect((host, port))
-    except socket.error:
-        hnptConnectionLogger.error("could not connect to honeypot")
-        exit(5)
+        host = "127.0.0.1"
+        s = socket.socket()
+        port = 12345                # Reserve a port for your service.
+        try:
+            s.connect((host, port))
+        except socket.error:
+            hnptConnectionLogger.error("could not connect to honeypot")
+            exit(5)
 
-    hnptConnectionLogger.info("connected to honeypot")
-    hnptConnectionLogger.info ("sending new version of server")
+        hnptConnectionLogger.info("connected to honeypot")
+        hnptConnectionLogger.info ("sending new version of server")
 
-    try:
-        s.send(("Server-Version=" + toSend).encode("ascii"))
-    except socket.error:
-        hnptConnectionLogger.error("Unable to send server-version!")
-        exit(6)
+        try:
+            s.send(("Server-Version=" + toSend).encode("ascii"))
+        except socket.error:
+            hnptConnectionLogger.error("Unable to send server-version!")
+            exit(6)
     
-    hnptConnectionLogger.info ("data sent, waiting for acknowledgement from hnpt")
-    resp = s.recv(1024).decode("ascii")
-    if resp == COMM_ACK:
-        rootLogger.info("successfully sent new server-version, honeypot sent ack")
-    else:
-        rootLogger.warning("successfully sent new server-version, honeypot did not send ack")
+        hnptConnectionLogger.info ("data sent, waiting for acknowledgement from hnpt")
+        resp = s.recv(1024).decode("ascii")
+        if resp == COMM_ACK:
+            rootLogger.info("successfully sent new server-version, honeypot sent ack")
+        else:
+            rootLogger.warning("successfully sent new server-version, honeypot did not send ack")
         
-    s.close() 
+        s.close() 
