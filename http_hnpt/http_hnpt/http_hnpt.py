@@ -85,7 +85,6 @@ def getResponseFileName(url_requested,resp_conf_file_object):
         if conf_line[0] == "#":
             continue
 
-
         conditions, response_page_path = conf_line.split("==")
         for condition in conditions.split("||"):
             if condition[0] == "%" and url_requested.find(condition[1:-1]) != -1:
@@ -96,14 +95,6 @@ def getResponseFileName(url_requested,resp_conf_file_object):
             return response_page_path.replace("\n", "")
                 
        
-def checkForSpecialChars(url):
-    special_chars = ["|", "+", "-", "&&", "||", "!", "(", ")", "{", "}", "[", "]", "^",
-                "~", "*", ":"]
-
-    for i in url[1:]:
-        if i in special_chars:
-            return True
-    return False
 
 
 
@@ -111,6 +102,15 @@ def checkForSpecialChars(url):
 
 
 
+
+
+
+import os
+print(os.getpid())
+
+pid_file = open("process.id", "w")
+pid_file.write(str(os.getpid()))
+pid_file.close()
 
 
 
@@ -124,10 +124,11 @@ maintenanceServer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 httpServer_socket.setblocking(0)
 maintenanceServer_socket.setblocking(0)
 hostname = socket.gethostname()    
-IPAddr = (([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")] or [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) + ["no IP found"])[0]
-
-httpServer_socket.bind((IPAddr, httpServer_port))
-maintenanceServer_socket.bind((IPAddr, maintenanceServer_port))
+#IPAddr = (([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")] or [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) + ["no IP found"])[0]
+IPAddrPublic = "172.31.45.189"
+IPAddrPrivate = "localhost"
+httpServer_socket.bind((IPAddrPublic, httpServer_port))
+maintenanceServer_socket.bind((IPAddrPrivate, maintenanceServer_port))
 httpServer_socket.listen(5)
 maintenanceServer_socket.listen(5)
 inputs = [httpServer_socket, maintenanceServer_socket]
@@ -136,20 +137,18 @@ message_queues = {}
 
 
 
-webserverVersion = "Apache/2.4.6 (CentOS)"
+webserverVersion = "Apache/2.4.7 (Ubuntu)"
 httpVersion= "HTTP/1.1"
 connectionAction = "close"
 contentType = "text/html; charset=iso-8859-1"
 statusCode = "200 OK"
 
-print("listening")
+print("listening on IP address", IPAddrPublic)
 
 #COMMUNICATION PROTOCOL RESPONSES
 COMM_ACK = "comm_ack"
 COMM_END = "comm_end"
 TURN_OFF = "turn_off"
-
-
 
 
 while inputs:
@@ -194,9 +193,6 @@ while inputs:
                         syslog.syslog(syslog.LOG_INFO, log)
                         syslog.closelog()
                         
-
-                        
-
                         resp_conf_file = open("response_conf.txt", "r")
                         response_filename = getResponseFileName(URL_requested, resp_conf_file)
                         resp_conf_file.close()
@@ -204,28 +200,15 @@ while inputs:
                         #*******building http header and payload******
                         header = ["", "", "", "", "", ""]
 
-                        
-                        print(URL_requested)
-                        
-                        if (len(URL_requested) == 0):
-                            statusCode = "400 Bad Request"
-                            response_filename = "./html_responses/400_badrequest.txt"
-                        elif (URL_requested[0] != "/" or checkForSpecialChars(URL_requested)) and ("/" not in URL_requested):
-                            statusCode = "400 Bad Request"
-                            response_filename = "./html_responses/400_badrequest.txt"
-                        elif(response_filename == "./html_responses/404.txt"):
-                            statusCode = "404 Not Found"
-
-                        else:
-                            statusCode = "200 OK"
-                        
-
-
                         payloadfile = open(response_filename, "r")
                         payload = payloadfile.read()
                         payloadfile.close()
-
-
+                        
+                        
+                        if(response_filename == "./html_responses/404.txt"):
+                            statusCode = "404 Not Found"
+                        else:
+                            statusCode = "200 OK"
                         header[0] = httpVersion + " " + statusCode
                         header[1] = "Date: " + HTTP_Date_generator()
                         header[2] = "Server: " + webserverVersion
@@ -286,8 +269,11 @@ while inputs:
     for s in writable:
         try:
             next_msg = message_queues[s].get_nowait()
-        except queue.Empty:
-            outputs.remove(s)
+        except (queue.Empty, KeyError):
+            try :
+                outputs.remove(s)
+            except:
+                continue
         else:
             print(next_msg)
             s.send(next_msg.encode('ascii'))
@@ -298,3 +284,8 @@ while inputs:
             outputs.remove(s)
         s.close()
         del message_queues[s]
+
+
+pid_file = open("pid", "w")
+pid_file.write("")
+pid_file.close()
