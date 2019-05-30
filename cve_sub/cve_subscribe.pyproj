@@ -31,6 +31,7 @@
     <Content Include="cve_product_name_dictionary.txt">
       <SubType>Code</SubType>
     </Content>
+    <Content Include="master.conf" />
     <Content Include="paths.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />

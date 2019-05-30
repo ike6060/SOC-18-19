@@ -3,7 +3,8 @@ import zipfile
 from urllib.request import urlopen
 import socket
 from sys import argv, exit
-from os import remove, rename
+from os import remove, rename, getpid
+from datetime import datetime, date
 import xml.etree.ElementTree as ET
 import logging
 import time
@@ -30,6 +31,24 @@ ERROR NUMBERS
 
 
 
+def HTTP_Date_generator():
+    date_fin = ""
+    date_utc =datetime.utcnow()
+    min = str(date_utc.minute)
+    sec = str(date_utc.second)
+    
+    to_day = datetime.today()
+    weekdays = ["Mon", "Tue", "Wen", "Thu", "Fri", "Sat", "Sun"]
+    months = ["Jan","Feb","Mar","Apr","May","June","July","Aug","Sept","Oct","Nov","Dec"]
+    date_fin += weekdays[to_day.weekday()] + ", "
+    date_fin+= str(date_utc.day) + " "+ months[date_utc.month-1] +" "+ str(date_utc.year) + " "
+    if len(str(date_utc.minute)) == 1:
+        min = "0"+str(date_utc.minute)
+    if len(str(date_utc.second)) == 1:
+        sec = "0"+str(date_utc.second)
+    
+    date_fin += str(date_utc.hour) + ":" + min + ":" + sec + " GMT"
+    return date_fin
 
 
 
@@ -40,7 +59,7 @@ def cveVersionTranslator(version,fileLogger, product_name, dict_file = "cve_prod
     try:
         dictionary = open(dict_file, "r")
     except IOError:
-        fileLogger.warning("cve_productname to http_servername dictionary was not found")
+        fileLogger.warning(HTTP_Date_generator()+":"+"cve_productname to http_servername dictionary was not found")
         return -1
 
 
@@ -113,20 +132,21 @@ def prepareFiles(config_path, nvdCveLogger, fileLogger):
     hnpt_update_timeout = conf_dict['hnpt_update_timeout'][:-1]
     conf.close()
     missing_meta = False
+    cve_up_to_date = False
     #******CHECK SHA256 CHECKSUM IF THERE IS NEW RECENT CVE RELEASE*******
-    nvdCveLogger.info("Checking for new version of CVE")
+    nvdCveLogger.info(HTTP_Date_generator()+":"+"Checking for new version of CVE")
     try:
         file_META = open(path_META, "r")
         prev_META_sha256 = file_META.readlines()[-1].split(":")[1]
     except IOError:
-        fileLogger.warning("local cve-META file not found")
+        fileLogger.warning(HTTP_Date_generator()+":"+"local cve-META file not found")
         missing_meta = True
         prev_META_sha256 = ""
 
     try:
         new_META = (urlopen(url_META).read()).decode("ascii")
     except:
-       nvdCveLogger.error("could not read online meta file")
+       nvdCveLogger.error(HTTP_Date_generator()+":"+"could not read online meta file")
        exit(2)
     
     new_META_sha256 = (new_META.split("\n")[-2]).split(":")[1]
@@ -135,23 +155,24 @@ def prepareFiles(config_path, nvdCveLogger, fileLogger):
     prev_META_sha256 = prev_META_sha256[:-1]
 
     if prev_META_sha256 == new_META_sha256 and missing_meta == False:
-        nvdCveLogger.info("no new CVE has been found")
+        nvdCveLogger.info(HTTP_Date_generator()+":"+"no new CVE has been found")
+        cve_up_to_date=True
     else:
-        nvdCveLogger.info("new CVE has been found")
-        nvdCveLogger.info("downloading new META file...")
-        fileLogger.info("updating local META file")
+        nvdCveLogger.info(HTTP_Date_generator()+":"+"new CVE has been found")
+        nvdCveLogger.info(HTTP_Date_generator()+":"+"downloading new META file...")
+        fileLogger.info(HTTP_Date_generator()+":"+"updating local META file")
         #******DOWNLOAD NEW META FILE*****
         try:
             req = requests.get(url_META, allow_redirects=True)
         except:
-            nvdCveLogger.error("could not download new meta file")
+            nvdCveLogger.error(HTTP_Date_generator()+":"+"could not download new meta file")
             exit(3)
 
         open(path_META, 'wb').write(req.content)
         
-        nvdCveLogger.info("downloading CVE file...")
-        nvdCveLogger.info("<finished>")
-        fileLogger.info("extracting CVE file...")
+        nvdCveLogger.info(HTTP_Date_generator()+":"+"downloading CVE file...")
+        nvdCveLogger.info(HTTP_Date_generator()+":"+"<finished>")
+        fileLogger.info(HTTP_Date_generator()+":"+"extracting CVE file...")
         
         r = requests.get(url_recent, allow_redirects=True)
         open(path_recent_zip, 'wb').write(r.content)    
@@ -166,18 +187,24 @@ def prepareFiles(config_path, nvdCveLogger, fileLogger):
         except:
             pass
         rename(temp_cve_name, nvd_cve_file)
-        fileLogger.info("<extraction finished>")
-    nvdCveLogger.info("<CVE database updating finished>")
+        fileLogger.info(HTTP_Date_generator()+":"+"<extraction finished>")
+    nvdCveLogger.info(HTTP_Date_generator()+":"+"<CVE database updating finished>")
     conf.close()
     
-    return nvd_cve_file, OS, default_apache_version, hnpt_update_timeout
+    return nvd_cve_file, OS, default_apache_version, hnpt_update_timeout, cve_up_to_date
 
 '''
 argv usage
 python27 cve_subscribe.py conf_file_path product_name vendor_name CVSS_score_up_eq CVSS_score_down_eq
 '''
 if __name__ == "__main__":
+    print(getpid())
 
+    pid_file = open("process.id", "w")
+    pid_file.write(str(getpid()))
+    pid_file.close()
+
+    
     logging.basicConfig()
     rootLogger = logging.getLogger()
     hnptConnectionLogger = logging.getLogger("Connection-Honeypot")
@@ -220,26 +247,31 @@ if __name__ == "__main__":
     hnpt_update_timeout = 5
     while True:
         time.sleep(int(hnpt_update_timeout))
-        nvd_cve_file_name, operating_system, default_apache_version, hnpt_update_timeout = prepareFiles(paths_filePath, cveConnectionLogger, fileLogger)
+        nvd_cve_file_name, operating_system, default_apache_version, hnpt_update_timeout, cve_up_to_date = prepareFiles(paths_filePath, cveConnectionLogger, fileLogger)
+        rootLogger.info(HTTP_Date_generator()+":"+"----------------------------------------------------")
         versions = []
+        if cve_up_to_date:
+            rootLogger.info(HTTP_Date_generator()+":"+"cve database is up to date, therefore not sending new version to hnpt")
+            continue
 
         for i in (findInCve(nvd_cve_file_name, product_name, vendor_name, CVSS_score_up_eq = CVSS_up, CVSS_score_down_eq = CVSS_down)):
             versions.append(i["versions"][0])
         if versions == []:
             toSend = default_apache_version
-            rootLogger.warning("no new vulnerable version in cve found...")
-            rootLogger.warning("sending default vuln-version to honeypot")
+            rootLogger.warning(HTTP_Date_generator()+":"+"no new vulnerable version in cve found...")
+            rootLogger.warning(HTTP_Date_generator()+":"+"sending default vuln-version to honeypot")
         else:
      
             toSend = cveVersionTranslator(versions[0],fileLogger, product_name)
             while toSend == -1:
                 dict_path = input("Product-name dictionary file not found... Please enter path to this file\n->")
             toSend = cveVersionTranslator(versions[0], product_name, dict_path)  
-            rootLogger.info("new version of hnpt server " + toSend)
+            rootLogger.info(HTTP_Date_generator()+":"+"new version of hnpt server " + toSend)
+            default_apache_version = toSend
 
 
         toSend = replaceInString(toSend, "&", operating_system)
-        hnptConnectionLogger.info("connecting to Honeypot...")
+        hnptConnectionLogger.info(HTTP_Date_generator()+":"+"connecting to Honeypot...")
 
 
         host = "127.0.0.1"
@@ -248,23 +280,26 @@ if __name__ == "__main__":
         try:
             s.connect((host, port))
         except socket.error:
-            hnptConnectionLogger.error("could not connect to honeypot")
+            hnptConnectionLogger.error(HTTP_Date_generator()+":"+"could not connect to honeypot")
             exit(5)
 
-        hnptConnectionLogger.info("connected to honeypot")
-        hnptConnectionLogger.info ("sending new version of server")
+        hnptConnectionLogger.info(HTTP_Date_generator()+":"+"connected to honeypot")
+        hnptConnectionLogger.info (HTTP_Date_generator()+":"+"sending new version of server")
 
         try:
             s.send(("Server-Version=" + toSend).encode("ascii"))
         except socket.error:
-            hnptConnectionLogger.error("Unable to send server-version!")
+            hnptConnectionLogger.error(HTTP_Date_generator()+":"+"Unable to send server-version!")
             exit(6)
     
-        hnptConnectionLogger.info ("data sent, waiting for acknowledgement from hnpt")
+        hnptConnectionLogger.info (HTTP_Date_generator()+":"+"data sent, waiting for acknowledgement from hnpt")
         resp = s.recv(1024).decode("ascii")
         if resp == COMM_ACK:
-            rootLogger.info("successfully sent new server-version, honeypot sent ack")
+            rootLogger.info(HTTP_Date_generator()+":"+"successfully sent new server-version, honeypot sent ack")
         else:
-            rootLogger.warning("successfully sent new server-version, honeypot did not send ack")
+            rootLogger.warning(HTTP_Date_generator()+":"+"successfully sent new server-version, honeypot did not send ack")
         
-        s.close() 
+        s.close()
+    pid_file = open("pid", "w")
+    pid_file.write("")
+    pid_file.close()
