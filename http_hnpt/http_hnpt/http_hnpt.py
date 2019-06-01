@@ -170,12 +170,14 @@ while inputs:
         else:            
             if (s is not httpServer_socket and s is not maintenanceServer_socket):
                 try:
-                    data = s.recv(1024).decode('ascii')
+                    data = s.recv(1024).decode('utf-8')
                 except (socket.error, UnicodeDecodeError) as e:
                     print(e)
                     continue
                 
-                print(data)
+                print("=========================================\n"+HTTP_Date_generator()+":"+"data received from connection:\n", data)
+
+
                 #COMMUNICATION CHANNEL WITH PORT_FORWARDER AND LATER INTERNET
                 if (data) and (s.getsockname()[1] == httpServer_port):                    
                     if (data == COMM_END):
@@ -275,7 +277,7 @@ while inputs:
             except:
                 continue
         else:
-            print(next_msg)
+            print("------------------------------------------------------------\n",HTTP_Date_generator()+":"+"data sent to client:\n", next_msg, "\n============================================================")
             s.send(next_msg.encode('ascii'))
 
     for s in exceptional:
