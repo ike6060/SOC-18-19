@@ -2,7 +2,7 @@ import requests
 import zipfile
 from urllib.request import urlopen
 import socket
-from sys import argv, exit
+from sys import argv
 from os import remove, rename, getpid
 from datetime import datetime, date
 import xml.etree.ElementTree as ET
@@ -147,7 +147,7 @@ def prepareFiles(config_path, nvdCveLogger, fileLogger):
         new_META = (urlopen(url_META).read()).decode("ascii")
     except:
        nvdCveLogger.error(HTTP_Date_generator()+":"+"could not read online meta file")
-       exit(2)
+       
     
     new_META_sha256 = (new_META.split("\n")[-2]).split(":")[1]
     
@@ -166,7 +166,7 @@ def prepareFiles(config_path, nvdCveLogger, fileLogger):
             req = requests.get(url_META, allow_redirects=True)
         except:
             nvdCveLogger.error(HTTP_Date_generator()+":"+"could not download new meta file")
-            exit(3)
+            
 
         open(path_META, 'wb').write(req.content)
         
@@ -241,7 +241,7 @@ if __name__ == "__main__":
     else:
         rootLogger.error("Insufficient number of arguments provided...")
         rootLogger.warning("proper usage : python3.6 cve_subscribe.py paths_file product_name vendor_name CVSS_score_up_eq CVSS_score_down_eq")
-        exit(1)
+        
 
 
     hnpt_update_timeout = 5
@@ -281,7 +281,7 @@ if __name__ == "__main__":
             s.connect((host, port))
         except socket.error:
             hnptConnectionLogger.error(HTTP_Date_generator()+":"+"could not connect to honeypot")
-            exit(5)
+      
 
         hnptConnectionLogger.info(HTTP_Date_generator()+":"+"connected to honeypot")
         hnptConnectionLogger.info (HTTP_Date_generator()+":"+"sending new version of server")
@@ -290,8 +290,7 @@ if __name__ == "__main__":
             s.send(("Server-Version=" + toSend).encode("ascii"))
         except socket.error:
             hnptConnectionLogger.error(HTTP_Date_generator()+":"+"Unable to send server-version!")
-            exit(6)
-    
+            
         hnptConnectionLogger.info (HTTP_Date_generator()+":"+"data sent, waiting for acknowledgement from hnpt")
         resp = s.recv(1024).decode("ascii")
         if resp == COMM_ACK:
