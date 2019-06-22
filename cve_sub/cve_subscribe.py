@@ -265,7 +265,7 @@ if __name__ == "__main__":
             toSend = cveVersionTranslator(versions[0],fileLogger, product_name)
             while toSend == -1:
                 dict_path = input("Product-name dictionary file not found... Please enter path to this file\n->")
-            toSend = cveVersionTranslator(versions[0], product_name, dict_path)  
+                toSend = cveVersionTranslator(version=versions[0], fileLogger=fileLogger,product_name=product_name, dict_file=dict_path)  
             rootLogger.info(HTTP_Date_generator()+":"+"new version of hnpt server " + toSend)
             default_apache_version = toSend
 
