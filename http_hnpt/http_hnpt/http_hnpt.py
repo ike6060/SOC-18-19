@@ -278,7 +278,10 @@ while inputs:
                 continue
         else:
             print("------------------------------------------------------------\n",HTTP_Date_generator()+":"+"data sent to client:\n", next_msg, "\n============================================================")
-            s.send(next_msg.encode('ascii'))
+            try:
+                s.send(next_msg.encode('ascii'))
+            except Exception as e:
+                print("!AN ERROR OCCURED WHEN DATA WERE SENT(", e, ")!")
 
     for s in exceptional:
         inputs.remove(s)
