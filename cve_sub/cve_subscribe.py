@@ -120,6 +120,10 @@ def parse_conf(file_handle):
 
 
 def prepareFiles(config_path, nvdCveLogger, fileLogger):
+    online_error = False
+    nvd_cve_file = OS = default_apache_version = hnpt_update_timeout = cve_up_to_date = ''
+
+
     conf = open(config_path, "r")
     conf_dict = parse_conf(conf)
     nvd_cve_file = conf_dict["nvd_cve_file"][:-1]
@@ -130,6 +134,7 @@ def prepareFiles(config_path, nvdCveLogger, fileLogger):
     OS = conf_dict['operating_system'][:-1]
     default_apache_version = conf_dict['default_apache_version'][:-1]
     hnpt_update_timeout = conf_dict['hnpt_update_timeout'][:-1]
+    online_error = False #returned True when error occured while retrieving files from nvd.nist.gov failed
     conf.close()
     missing_meta = False
     cve_up_to_date = False
@@ -147,6 +152,8 @@ def prepareFiles(config_path, nvdCveLogger, fileLogger):
         new_META = (urlopen(url_META).read()).decode("ascii")
     except:
        nvdCveLogger.error(HTTP_Date_generator()+":"+"could not read online meta file")
+       online_error = True
+       return online_error,nvd_cve_file, OS, default_apache_version, hnpt_update_timeout, cve_up_to_date
        
     
     new_META_sha256 = (new_META.split("\n")[-2]).split(":")[1]
@@ -166,7 +173,8 @@ def prepareFiles(config_path, nvdCveLogger, fileLogger):
             req = requests.get(url_META, allow_redirects=True)
         except:
             nvdCveLogger.error(HTTP_Date_generator()+":"+"could not download new meta file")
-            
+            online_error = True
+            return online_error,nvd_cve_file, OS, default_apache_version, hnpt_update_timeout, cve_up_to_date
 
         open(path_META, 'wb').write(req.content)
         
@@ -174,14 +182,25 @@ def prepareFiles(config_path, nvdCveLogger, fileLogger):
         nvdCveLogger.info(HTTP_Date_generator()+":"+"<finished>")
         fileLogger.info(HTTP_Date_generator()+":"+"extracting CVE file...")
         
-        r = requests.get(url_recent, allow_redirects=True)
+        try:
+            r = requests.get(url_recent, allow_redirects=True)
+        except:
+            nvdCveLogger.error(HTTP_Date_generator()+":Failed to download new cve database")
+            online_error = True
+            return online_error,nvd_cve_file, OS, default_apache_version, hnpt_update_timeout, cve_up_to_date
+
         open(path_recent_zip, 'wb').write(r.content)    
         print(path_recent_zip)
-        zip_ref = zipfile.ZipFile(path_recent_zip, 'r')
-        temp_cve_name = str(zip_ref.namelist()[0])
-        zip_ref.extractall(''   )
-        zip_ref.close()
-        remove(path_recent_zip)
+        try:
+            zip_ref = zipfile.ZipFile(path_recent_zip, 'r')
+            temp_cve_name = str(zip_ref.namelist()[0])
+            zip_ref.extractall(''   )
+            zip_ref.close()
+            remove(path_recent_zip)
+        except:
+            fileLogger.info(HTTP_Date_generator()+":"+"Failed to extract or remove cve database")
+            online_error = True
+            return online_error,nvd_cve_file, OS, default_apache_version, hnpt_update_timeout, cve_up_to_date
         try:
             remove(nvd_cve_file)
         except:
@@ -191,7 +210,7 @@ def prepareFiles(config_path, nvdCveLogger, fileLogger):
     nvdCveLogger.info(HTTP_Date_generator()+":"+"<CVE database updating finished>")
     conf.close()
     
-    return nvd_cve_file, OS, default_apache_version, hnpt_update_timeout, cve_up_to_date
+    return online_error,nvd_cve_file, OS, default_apache_version, hnpt_update_timeout, cve_up_to_date
 
 '''
 argv usage
@@ -247,7 +266,12 @@ if __name__ == "__main__":
     hnpt_update_timeout = 5
     while True:
         time.sleep(int(hnpt_update_timeout))
-        nvd_cve_file_name, operating_system, default_apache_version, hnpt_update_timeout, cve_up_to_date = prepareFiles(paths_filePath, cveConnectionLogger, fileLogger)
+       
+        error, nvd_cve_file_name, operating_system, default_apache_version, hnpt_update_timeout, cve_up_to_date = prepareFiles(paths_filePath, cveConnectionLogger, fileLogger)
+        
+        if error == True:
+            continue
+
         rootLogger.info(HTTP_Date_generator()+":"+"----------------------------------------------------")
         versions = []
         if cve_up_to_date:
