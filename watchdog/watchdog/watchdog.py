@@ -1,9 +1,27 @@
-
+#!/usr/bin/env python3.6
 import getpass, smtplib, argparse, socket
 from email.mime.text import MIMEText as text
 from os.path import exists
 import sys
-
+from datetime import datetime, date
+def HTTP_Date_generator():
+    date_fin = ""
+    date_utc =datetime.utcnow()
+    min = str(date_utc.minute)
+    sec = str(date_utc.second)
+    
+    to_day = datetime.today()
+    weekdays = ["Mon", "Tue", "Wen", "Thu", "Fri", "Sat", "Sun"]
+    months = ["Jan","Feb","Mar","Apr","May","June","July","Aug","Sept","Oct","Nov","Dec"]
+    date_fin += weekdays[to_day.weekday()] + ", "
+    date_fin+= str(date_utc.day) + " "+ months[date_utc.month-1] +" "+ str(date_utc.year) + " "
+    if len(str(date_utc.minute)) == 1:
+        min = "0"+str(date_utc.minute)
+    if len(str(date_utc.second)) == 1:
+        sec = "0"+str(date_utc.second)
+    
+    date_fin += str(date_utc.hour) + ":" + min + ":" + sec + " GMT"
+    return date_fin
 
 def proc_check(pid_file):
     procid = open(pid_file, "r").read()
@@ -46,7 +64,7 @@ def main():
     parser.add_argument('-m', '--master', help="provide this parameter when checking master program", action="store_true")
     parsed = parser.parse_args()    
     
-    
+    print(HTTP_Date_generator()+":")
     if parsed.master == True:
         if proc_check(parsed.pidfile) == 0:
             return 0
@@ -96,7 +114,7 @@ def main():
         print('Email sent!')
     except Exception as e:  
         print('Something went wrong...\n', e)
-
+    print("-------------------------------")
 
 
 if __name__ == "__main__":
