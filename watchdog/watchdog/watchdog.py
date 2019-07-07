@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.6
 import getpass, smtplib, argparse, socket
 from email.mime.text import MIMEText as text
-from os.path import exists
+import os
 import sys
 from datetime import datetime, date
 def HTTP_Date_generator():
@@ -30,7 +30,7 @@ def proc_check(pid_file):
         return 1
     path = "/proc/"+procid
     print(path)
-    if exists(path):
+    if os.path.exists(path):
         print("program is running")
         return 0
     else:
@@ -60,17 +60,19 @@ def hnpt_check(get_req_file):
 def main():
     parser = argparse.ArgumentParser(description='My example explanation')
     parser.add_argument('-p','--pidfile', help='provide a path to file with PID')
+    parser.add_argument('-l','--lastwords', help='provide a path to output file of program; last 20 lines of output will be sent')
     parser.add_argument('-hn', '--honeypot',help = "if watching status of honeypot, provide path to get-req file", default="")
     parser.add_argument('-m', '--master', help="provide this parameter when checking master program", action="store_true")
     parsed = parser.parse_args()    
-    
+    	
+    last_words = (os.popen("sudo tail "+parsed.lastwords+" -n 20").read())
     print(HTTP_Date_generator()+":")
     if parsed.master == True:
         if proc_check(parsed.pidfile) == 0:
             return 0
         else:
             subject = "MASTER IS NOT RUNNING"
-            message = "master is not running"
+            message = "master is not running\n\n\nlast words from master:\n"+last_words
     elif parsed.master == False and parsed.honeypot != "":
         proc_running = proc_check(parsed.pidfile)
         hnpt_running = hnpt_check(parsed.honeypot)
@@ -79,7 +81,7 @@ def main():
             return 0
         elif proc_running != 0:
             subject = "HONEYPOT IS NOT RUNNING"
-            message = "honeypot is not running"
+            message = "honeypot is not running\n\n\nlast words from honeypot:\n"+last_words
         elif proc_running == 0 and hnpt_running != 0:
             subject = "HONEYPOT IS INACCESSIBLE"
             message = "the watchdog was not able to connect to the internet interface of the honeypot"
